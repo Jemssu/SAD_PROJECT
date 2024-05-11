@@ -123,7 +123,7 @@ public class CustomerDetails extends JFrame{
         WindowAdapter windowAdapter = new WindowAdapter() {
             @Override
             public void windowLostFocus(WindowEvent e) {
-                System.out.println("Focus Lost -- New Order Frame");
+                System.out.println("Focus Lost -- Customer Details Frame");
             }
             @Override
             public void windowClosing(WindowEvent e) {

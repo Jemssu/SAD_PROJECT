@@ -21,11 +21,16 @@ public class Dashboard extends JFrame {
     @SuppressWarnings("unused")
     private NewOrder newOrder;
     @SuppressWarnings("unused")
+    private OrderList orderList;
+    @SuppressWarnings("unused")
     private CustomerDetails customerDetails;
+    @SuppressWarnings("unused")
+    private GenerateReport generateReport;
     @SuppressWarnings("unused")
     private ManageInventory manageInventory;
     @SuppressWarnings("unused")
     private UpdateProducts updateProducts;
+    
 
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
@@ -281,14 +286,25 @@ public class Dashboard extends JFrame {
         
         // BUTTON 2 MODEL with LISTENER (Order List)
         button2.getModel().addChangeListener(new ChangeListener() {
+            private boolean previousPressedState2 = false;
+
             @Override
             public void stateChanged(ChangeEvent e) {
                 ButtonModel model = (ButtonModel) e.getSource();
-                if (model.isPressed()) {
+                boolean currentPressedState2 = model.isPressed();
+
+                if (currentPressedState2 && !previousPressedState2) {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 2 - Is Pressed");
+
+                    orderList = new OrderList(access_level, Dashboard.this);
+                    // Update the previousPressedState and Disables the Button
+                    previousPressedState2 = currentPressedState2;
+                    // Freeze the dashboardFrame until newOrder is closed
+                    hideMainDashboard();
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    previousPressedState2 = currentPressedState2;
                 }
             }
         });
@@ -320,14 +336,25 @@ public class Dashboard extends JFrame {
 
         // BUTTON 4 MODEL with LISTENER (Generate Report)
         button4.getModel().addChangeListener(new ChangeListener() {
+            private boolean previousPressedState4 = false;
+
             @Override
             public void stateChanged(ChangeEvent e) {
                 ButtonModel model = (ButtonModel) e.getSource();
-                if (model.isPressed()) {
+                boolean currentPressedState4 = model.isPressed();
+
+                if (currentPressedState4 && !previousPressedState4) {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 4 - Is Pressed");
+
+                    generateReport = new GenerateReport(access_level, Dashboard.this);
+                    // Update the previousPressedState and Disables the Button
+                    previousPressedState4 = currentPressedState4;
+                    // Freeze the dashboardFrame until newOrder is closed
+                    hideMainDashboard();
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    previousPressedState4 = currentPressedState4;
                 }
             }
         });
