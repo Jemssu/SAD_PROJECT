@@ -694,8 +694,6 @@ public class Dashboard extends JFrame {
         enableAllDashButtons();
         button3.setEnabled(false);
         button3.setBackground(Color.decode("#84817a"));
-        button5.setEnabled(false);
-        button5.setBackground(Color.decode("#84817a"));
         button6.setEnabled(false);
         button6.setBackground(Color.decode("#84817a"));
     } // end of show showDashboard_Employee
@@ -725,7 +723,7 @@ public class Dashboard extends JFrame {
     public void showMainDashboard() {
         dashboardFrame.setVisible(true);
         toFront(); // Bring DashboardUI frame to front
-        System.out.println("Showing Main DasDashboard!");
+        System.out.println("Showing Main Dashboard!");
     }
     
     public static void main(String[] args) {

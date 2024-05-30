@@ -37,6 +37,8 @@ public class UpdateProducts extends JFrame {
     private JTextField searchBar;
     JButton button1, button2, button3, button4, button5, button6;
 
+    Operations ops = new Operations();
+
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
      * @param path - source file path of the image
@@ -388,10 +390,11 @@ public class UpdateProducts extends JFrame {
         customerScrollPane.setBounds(20, 70, 790, 570);
         rightPanel.add(customerScrollPane);
 
-        tableModel.addColumn("ItemID");
-        tableModel.addColumn("TypeID");
-        tableModel.addColumn("LengthID");
+        tableModel.addColumn("Product ID");
+        tableModel.addColumn("Name");
         tableModel.addColumn("Price");
+
+        ops.updateProductTable(tableModel);
     } // end of New Order
 
     /**
