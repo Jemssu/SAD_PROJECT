@@ -221,22 +221,41 @@ public class Operations {
         return false;
     }
 
-    /**DESCRIPTION
+    /**
+     * Checks if a product with the given type_ID and size_ID already exists in the tbl_product table.
      * 
+     * @param type_ID The ID of the product type
+     * @param size_ID The ID of the product size
+     * @return true if the product already exists, false otherwise
      */
-    public void addProduct() { 
-        // Show Combobox of Type_ID and Type_Name from tbl_Type
+    public boolean doesProductTypeSizeExist(int type_ID, int size_ID) { 
+        String query = "SELECT COUNT(*) FROM tbl_product WHERE type_ID = ? AND size_ID = ?";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setInt(1, type_ID);
+            pstmt.setInt(2, size_ID);
 
-        // Show Combobox of Size_ID and Size_length from tbl_Length
-
-        // Gets name of Type_Name + Size_Length and puts it in String "Length"
-
-        // Ask for Price
-
-        // Show Full Details
-
-        // Confirm
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    return count > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return false;
     }
+
+    
+
+    public void addProduct() {
+
+    }
+
 
     /**
      * Removes a product by setting its product_ActiveStatus to 'inactive'
@@ -289,17 +308,83 @@ public class Operations {
         }
     }
 
-    /**DESCRIPTION
-     * 
+    /**
+     * Renames the product
      */
     public void renameProduct() { 
         // Ask for ID
+        String input = JOptionPane.showInputDialog(null, "Enter the Product ID to rename:", "Rename Product", JOptionPane.QUESTION_MESSAGE);
+        if (input == null || input.trim().isEmpty()) {
+            return; // User cancelled or didn't enter an ID
+        }
 
-        // Change Product Name
+        // Checks if product ID is valid / Integer
+        int product_ID;
+        try {
+            product_ID = Integer.parseInt(input.trim());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid Product ID", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        } 
 
-        // Show Confirmation
+        // Check If Product ID does exist
+        if (!doesProductExist(product_ID)) {
+            JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        // Done
+        // Ask for new product name
+        String newName = JOptionPane.showInputDialog(null, "Enter the new name for " + getCurrentProductName(product_ID) + ":", "Rename Product", JOptionPane.QUESTION_MESSAGE);
+        if (newName == null || newName.trim().isEmpty()) {
+            return; // User cancelled or didn't enter a name
+        }
+
+        // Update product name
+        String updateQuery = "UPDATE tbl_product SET product_Name = ? WHERE product_ID = ?";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
+            
+            pstmt.setString(1, newName.trim());
+            pstmt.setInt(2, product_ID);
+            int rowsAffected = pstmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(null, "Product name has been updated successfully.", "Product Renamed", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to update the product name.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while updating the product name.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Retrieves the current name of the product with the given ID.
+     * 
+     * @param product_ID The ID of the product
+     * @return The current name of the product
+     */
+    private String getCurrentProductName(int product_ID) {
+        String currentName = null;
+        String query = "SELECT product_Name FROM tbl_product WHERE product_ID = ?";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, product_ID);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    currentName = rs.getString("product_Name");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return currentName;
     }
 
     /**
@@ -346,7 +431,7 @@ public class Operations {
         }
 
         // Show current price and ask for new price
-        String newPriceStr = JOptionPane.showInputDialog(null, "Current price: " + currentPrice + "\nEnter the new price:", "Change Product Price", JOptionPane.QUESTION_MESSAGE);
+        String newPriceStr = JOptionPane.showInputDialog(null, getCurrentProductName(product_ID) + " Current price: " + currentPrice + "\nEnter the new price:", "Change Product Price", JOptionPane.QUESTION_MESSAGE);
         if (newPriceStr == null || newPriceStr.trim().isEmpty()) {
             return; // User cancelled or didn't enter a new price
         }

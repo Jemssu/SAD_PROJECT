@@ -255,6 +255,9 @@ public class UpdateProducts extends JFrame {
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Product - Is Pressed");
+
+                    ops.addProduct();
+                    ops.updateProductTable(tableModel);
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -269,6 +272,9 @@ public class UpdateProducts extends JFrame {
                 if (model.isPressed()) {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Rename Product - Is Pressed");
+
+                    ops.renameProduct();
+                    ops.updateProductTable(tableModel);
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
