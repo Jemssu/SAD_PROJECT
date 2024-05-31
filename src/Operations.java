@@ -250,10 +250,221 @@ public class Operations {
         return false;
     }
 
-    
+    /**
+     * Checks if a supplier with the given supplier_ID exists in the tbl_supplier table.
+     *
+     * @param supplier_ID The ID of the supplier to check.
+     * @return true if the supplier exists, false otherwise.
+     */
+    public boolean doesSupplierExist(int supplier_ID) {
+        String query = "SELECT COUNT(*) FROM tbl_supplier WHERE supplier_ID = ?";
 
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, supplier_ID);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    return count > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets the full product name by concatenating type_Name from tbl_type and size_length from tbl_size.
+     *
+     * @param type_ID The ID of the product type.
+     * @param size_ID The ID of the product size.
+     * @return The full product name in the format "TYPE_NAME SIZE_LENGTH".
+     */
+    public String getProductFullName(int type_ID, int size_ID) {
+        String typeName = null;
+        String sizeLength = null;
+
+        String typeQuery = "SELECT type_Name FROM tbl_type WHERE type_ID = ?";
+        String sizeQuery = "SELECT size_length FROM tbl_size WHERE size_ID = ?";
+
+        try (Connection conn = connect();
+            PreparedStatement typeStmt = conn.prepareStatement(typeQuery);
+            PreparedStatement sizeStmt = conn.prepareStatement(sizeQuery)) {
+
+            typeStmt.setInt(1, type_ID);
+            sizeStmt.setInt(1, size_ID);
+
+            try (ResultSet typeRs = typeStmt.executeQuery();
+                ResultSet sizeRs = sizeStmt.executeQuery()) {
+
+                if (typeRs.next()) {
+                    typeName = typeRs.getString("type_Name");
+                }
+
+                if (sizeRs.next()) {
+                    sizeLength = sizeRs.getString("size_length");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        if (typeName != null && sizeLength != null) {
+            return typeName + " " + sizeLength;
+        } else {
+            return null; // or handle this case as needed
+        }
+    }
+
+    /**
+     * Adds a new product to the tbl_product table.
+     */
     public void addProduct() {
+        try (Connection conn = connect()) {
+            if (conn == null) {
+                JOptionPane.showMessageDialog(null, "Failed to connect to the database.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
+            // Select Type_ID and Type_Name
+            int type_ID = selectTypeID(conn);
+            if (type_ID == -1) return; // User cancelled
+
+            // Select Size_ID and Size_Length
+            int size_ID = selectSizeID(conn);
+            if (size_ID == -1) return; // User cancelled
+
+            if (doesProductTypeSizeExist(type_ID, size_ID)) {
+                JOptionPane.showMessageDialog(null, "Product with Type and Size already exists!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }; 
+
+            // Get the full product name
+            String defaultProductName = getProductFullName(type_ID, size_ID);
+            if (defaultProductName == null) {
+                JOptionPane.showMessageDialog(null, "Failed to generate product full name.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Input Product Name with default value
+            String productName = (String) JOptionPane.showInputDialog(
+                null,
+                "Enter the product name:",
+                "Add Product",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                null,
+                defaultProductName
+            );
+
+            if (productName == null || productName.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Product name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Input Product Price
+            double productPrice = getValidDouble("Enter the product price:", "Add Product");
+
+            if (productPrice <= 0) return; // User cancelled or invalid input
+
+            // Input Supplier ID
+            int supplier_ID = getValidInt("Enter the supplier ID:", "Add Product");
+            if (!doesSupplierExist(supplier_ID)) {
+                JOptionPane.showMessageDialog(null, "This Supplier Doesn't Exist", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }; 
+
+            // Input Stock Amount
+            int stockAmount = getValidInt("Enter the stock amount:", "Add Product");
+            if (stockAmount < 0) return; // User cancelled or invalid input
+
+            // Insert the new product into the database
+            String insertQuery = "INSERT INTO tbl_product (type_ID, size_ID, product_Name, product_Price, last_Supplied_BY, product_StockLeft, product_ActiveStatus) VALUES (?, ?, ?, ?, ?, ?, 'active')";
+
+            try (PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
+                pstmt.setInt(1, type_ID);
+                pstmt.setInt(2, size_ID);
+                pstmt.setString(3, productName.trim());
+                pstmt.setDouble(4, productPrice);
+                pstmt.setInt(5, supplier_ID);
+                pstmt.setInt(6, stockAmount);
+
+                int rowsAffected = pstmt.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    JOptionPane.showMessageDialog(null, "Product added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Failed to add the product.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "An error occurred while adding the product.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while connecting to the database.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private int selectTypeID(Connection conn) throws SQLException {
+        String query = "SELECT type_ID, type_Name FROM tbl_type";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
+            DefaultTableModel model = new DefaultTableModel(new String[]{"Type ID", "Type Name"}, 0);
+            while (rs.next()) {
+                model.addRow(new Object[]{rs.getInt("type_ID"), rs.getString("type_Name")});
+            }
+            return showTableDialog(model, "Select Type");
+        }
+    }
+
+    private int selectSizeID(Connection conn) throws SQLException {
+        String query = "SELECT size_ID, size_length FROM tbl_size";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
+            DefaultTableModel model = new DefaultTableModel(new String[]{"Size ID", "Size Length"}, 0);
+            while (rs.next()) {
+                model.addRow(new Object[]{rs.getInt("size_ID"), rs.getString("size_length")});
+            }
+            return showTableDialog(model, "Select Size");
+        }
+    }
+
+    private int showTableDialog(DefaultTableModel model, String title) {
+        JTable table = new JTable(model);
+        table.setDefaultEditor(Object.class, null);
+        JScrollPane scrollPane = new JScrollPane(table);
+        int result = JOptionPane.showConfirmDialog(null, scrollPane, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION && table.getSelectedRow() != -1) {
+            return (int) table.getValueAt(table.getSelectedRow(), 0);
+        }
+        return -1; // User cancelled or no selection
+    }
+
+    private int getValidInt(String message, String title) {
+        while (true) {
+            String input = JOptionPane.showInputDialog(null, message, title, JOptionPane.QUESTION_MESSAGE);
+            if (input == null || input.trim().isEmpty()) return -1; // User cancelled
+            try {
+                return Integer.parseInt(input.trim());
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid number.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private double getValidDouble(String message, String title) {
+        while (true) {
+            String input = JOptionPane.showInputDialog(null, message, title, JOptionPane.QUESTION_MESSAGE);
+            if (input == null || input.trim().isEmpty()) return -1; // User cancelled
+            try {
+                return Double.parseDouble(input.trim());
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid number.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
 
@@ -275,6 +486,7 @@ public class Operations {
             JOptionPane.showMessageDialog(null, "Invalid Product ID", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         } 
+        
 
         // Check If Product ID does exist
         if (!doesProductExist(product_ID)) {
@@ -492,4 +704,58 @@ public class Operations {
             e.printStackTrace();
         }
     }
+
+    //----------------------------------------------------------------
+    /** 
+     * MANAGE INVENTORY METHODS
+    */
+    public void updateLargeTable() {
+
+    }
+
+    public void updateSmallTable() {
+
+    }
+
+    public void filterLargeTable() {
+        // SORTS by NAME A - Z ONCE
+        // SORTS by STOCK TWICE
+    }
+
+    public void filterSmallTable() {
+        // SORTS by NAME A - Z ONCE
+        // SORTS by STOCK TWICE
+    }
+
+
+    public void addStock(int product_ID) {
+
+    }
+
+    public void removeStock(int product_ID) {
+
+    }
+
+    public void emptyStock(int product_ID) {
+        
+    }
+    
+    public void changeStockStatus(int product_ID) {
+        // Change Status to Either Pending or None
+    }
+
+    public void searchStock(int product_ID) {
+
+    }
+
+
+
+    // WORK IN PROGRESS / FUTURE ADDITIONS
+
+    /**
+     * ABILITY TO DO THE FOLLOWING
+     * -> ADD MORE TYPE / ID FOR ADMIN
+     * -> ADD MORE SIZE / ID FOR ADMIN
+     * -> ADD MORE SUPPLIER / ID FOR ADMIN
+     */
 }
