@@ -1,4 +1,6 @@
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -17,7 +19,7 @@ public class Dashboard extends JFrame {
     private JPanel loginPanel, welcomePanel;
     private ImageButton button1, button2, button3, button4, button5, button6;    
     String bgColor = "#f7f1e3";
-    String access_level = "";
+    String accessLevel = "",  currentUser = "";
     @SuppressWarnings("unused")
     private NewOrder newOrder;
     @SuppressWarnings("unused")
@@ -30,7 +32,26 @@ public class Dashboard extends JFrame {
     private ManageInventory manageInventory;
     @SuppressWarnings("unused")
     private UpdateProducts updateProducts;
+
+    ButtonModel loginModel;
     
+    Operations ops = new Operations();
+    
+    /**
+     * Method to run XAMPP.
+     */
+    private static void runXAMPP() throws IOException {
+        Process runXAMPP = Runtime.getRuntime().exec("D://xampp//xampp_start.exe");
+        System.out.println("XAMPP started.");
+    }
+    
+    /**
+     * Method to run MySQL.
+     */
+    private static void runSQL() throws IOException {
+        Process runSQL = Runtime.getRuntime().exec("D://xampp//mysql//bin//mysqld.exe");
+        System.out.println("MySQL started.");
+    }
 
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
@@ -272,7 +293,7 @@ public class Dashboard extends JFrame {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 1 - Is Pressed");
 
-                    newOrder = new NewOrder(access_level, Dashboard.this);
+                    newOrder = new NewOrder(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState = currentPressedState;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -297,7 +318,7 @@ public class Dashboard extends JFrame {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 2 - Is Pressed");
 
-                    orderList = new OrderList(access_level, Dashboard.this);
+                    orderList = new OrderList(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState2 = currentPressedState2;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -322,7 +343,7 @@ public class Dashboard extends JFrame {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 3 - Is Pressed");
 
-                    customerDetails = new CustomerDetails(access_level, Dashboard.this);
+                    customerDetails = new CustomerDetails(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState3 = currentPressedState3;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -347,7 +368,7 @@ public class Dashboard extends JFrame {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 4 - Is Pressed");
 
-                    generateReport = new GenerateReport(access_level, Dashboard.this);
+                    generateReport = new GenerateReport(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState4 = currentPressedState4;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -372,7 +393,7 @@ public class Dashboard extends JFrame {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 5 - Is Pressed");
 
-                    manageInventory = new ManageInventory(access_level, Dashboard.this);
+                    manageInventory = new ManageInventory(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState5 = currentPressedState5;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -397,7 +418,7 @@ public class Dashboard extends JFrame {
                     button6.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 5 - Is Pressed");
 
-                    updateProducts = new UpdateProducts(access_level, Dashboard.this);
+                    updateProducts = new UpdateProducts(accessLevel, Dashboard.this);
                     // Update the previousPressedState and Disables the Button
                     previousPressedState6 = currentPressedState6;
                     // Freeze the dashboardFrame until newOrder is closed
@@ -490,96 +511,54 @@ public class Dashboard extends JFrame {
         loginButton.setBounds(325, 150, 170, 40);
         bottomLeftPanel.add(loginPanel);
 
-
         // ACTION LISTENERS
-        ButtonModel buttonModel = loginButton.getModel();
-        buttonModel.addChangeListener(new ChangeListener() {
+        loginButton.addActionListener(new ActionListener() {
             @Override
-            public void stateChanged(ChangeEvent e) {
-                if (buttonModel.isPressed()) {
-                    int username = Integer.parseInt(usernameField.getText());
+            public void actionPerformed(ActionEvent e) {
+                if (e.getSource() == loginButton) { // Check if the source of the event is the login button
+                    String username = usernameField.getText();
                     String password = new String(passwordField.getPassword());
-                    // Check username and password validity
-                    if (isValidUsername(username) && isValidPassword(password)) {
-                        System.out.println("Login Button: Valid, Checking Power Level...");
-                        if (checkUserPower(username) == "admin") { 
-                            showDashboard_Admin();
-                            showDashboard_Login_Welcome(bottomLeftPanel);
-                            hideDashboard_Login_Form();
-                        } else if (checkUserPower(username) == "manager") { 
-                            showDashboard_Manager();
-                            showDashboard_Login_Welcome(bottomLeftPanel);
-                            hideDashboard_Login_Form();
-                        } else if (checkUserPower(username) == "employee") { 
-                            showDashboard_Employee();
-                            showDashboard_Login_Welcome(bottomLeftPanel);
-                            hideDashboard_Login_Form();
-                        } else if (checkUserPower(username) == "ERROR") {
-                            showDashboard_Nobody();
-                        } else {
-                            showDashboard_Nobody();
-                        }
+
+                    if (username.isEmpty() || password.isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Please enter both username and password", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    if (!ops.doesUsernameExist(username) || !ops.doesPasswordMatchWithUsername(username, password)) {
+                        JOptionPane.showMessageDialog(null, "Username does not exist or Password does not match", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    int loginID = ops.getLoginID(username, password);
+                    accessLevel = ops.getAccessLevel(loginID);
+                    currentUser = ops.getFullName(loginID);
+
+                    // Show confirmation or dashboard
+                    JOptionPane.showMessageDialog(null, "Login successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+                    if (accessLevel.equals("owner") || accessLevel.equals("admin")) {
+                        // Access level is 'owner' or 'admin'
+                        showDashboard_Admin();
+                        hideDashboard_Login_Form();
+                        showDashboard_Login_Welcome(parentPanel);
+                    } else if (accessLevel.equals("manager")) {
+                        // Access level is 'manager'
+                        showDashboard_Manager();
+                        hideDashboard_Login_Form();
+                        showDashboard_Login_Welcome(parentPanel);
+                    } else if (accessLevel.equals("salesperson") || accessLevel.equals("salesofficer") || accessLevel.equals("laborer") || accessLevel.equals("cashier")) {
+                        // Access level is 'salesperson', 'salesofficer', 'laborer', or 'cashier'
+                        showDashboard_Employee();
+                        hideDashboard_Login_Form();
+                        showDashboard_Login_Welcome(parentPanel);
                     } else {
-                        System.out.println("Login Button: Error, Incorrect username or password.");
+                        // Access level is none of the above
                         showDashboard_Nobody();
                     }
                 }
             }
         });
-    } // end of Dashboard_Login_Form
 
-    // Method to check validity of username
-    private boolean isValidUsername(int username) {
-        return username >= 100000 && username <= 999999;
-        // check database if ID exists
-    }
-    
-    // Method to check validity of password
-    private boolean isValidPassword(String password) {
-        return password.length() <= 16;
-        // check database if password exists
-    }
-    
-    /**
-     * Codes divisible by 3: 102, 303, 405, 606, 909
-     * Codes with digits summing up to 7: 106, 205, 304, 403, 502
-     * Codes not meeting the above conditions: 104, 212, 302, 410, 500
-     */
-
-    public String checkUserPower(int username) {
-        @SuppressWarnings("unused")
-        String result = "";
-        int firstThreeDigits = username / 1000;
-        if (firstThreeDigits % 3 == 0) {
-            // Admin
-            System.out.println("Power Level Checked: ADMIN");
-            access_level = "admin";
-            return result = "admin";
-        } else if (sumOfDigits(firstThreeDigits) == 7) {
-            // Manager
-            System.out.println("Power Level Checked: MANAGER");
-            access_level = "manager";
-            return result = "manager";
-        } else if (sumOfDigits(firstThreeDigits) == 5){
-            // Employee
-            System.out.println("Power Level Checked: EMPLOYEE");
-            access_level = "employee";
-            return result = "employee";
-        } else {
-            System.out.println("Power Level Checked: ERROR");
-            access_level = "";
-            return result = "ERROR";
-        }
-    }
-    
-    // Method to calculate the sum of digits
-    private int sumOfDigits(int number) {
-        int sum = 0;
-        while (number != 0) {
-            sum += number % 10;
-            number /= 10;
-        }
-        return sum;
     }
     
     public void hideDashboard_Login_Form() {
@@ -598,12 +577,12 @@ public class Dashboard extends JFrame {
         //loginPanel.setBorder(BorderFactory.createTitledBorder(""));
         welcomePanel.setBackground(Color.decode(bgColor));
 
-        JLabel welcomePanelLabel = new JLabel("Welcome *User*");
-        welcomePanelLabel.setBounds(325, 10, 200, 40);
+        JLabel welcomePanelLabel = new JLabel("Welcome to the System!   " + currentUser);
+        welcomePanelLabel.setBounds(200, 10, 500, 40);
         welcomePanel.add(welcomePanelLabel);
 
-        JLabel roleLabel = new JLabel("Temporary Text Here: " + access_level);
-        roleLabel.setBounds(200, 50, 500, 40);
+        JLabel roleLabel = new JLabel("Store " + accessLevel);
+        roleLabel.setBounds(340, 50, 500, 40);
         welcomePanel.add(roleLabel);
 
         // Adding logout button
@@ -614,15 +593,16 @@ public class Dashboard extends JFrame {
         bottomLeftPanel.add(welcomePanel);
 
         // ACTION LISTENERS
-        ButtonModel buttonModel = logoutButton.getModel();
-        buttonModel.addChangeListener(new ChangeListener() {
+        ButtonModel logoutModel = logoutButton.getModel();
+        logoutModel.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                if (buttonModel.isPressed()) {
+                if (logoutModel.isPressed()) {
                     hideDashboard_Welcome_Form();
                     showDashboard_Login_Form(bottomLeftPanel);
                     showDashboard_Nobody();
-                    access_level = "";
+                    accessLevel = "";
+                    currentUser = "";
                 }
             }
         });
@@ -698,6 +678,31 @@ public class Dashboard extends JFrame {
         button6.setBackground(Color.decode("#84817a"));
     } // end of show showDashboard_Employee
 
+    public void hideMainDashboard() {
+        dashboardFrame.setVisible(false);
+        System.out.println("Hiding Main Dashboard!");
+    }
+    
+    public void showMainDashboard() {
+        dashboardFrame.setVisible(true);
+        toFront(); // Bring DashboardUI frame to front
+        System.out.println("Showing Main Dashboard!");
+    }
+    
+    public static void main(String[] args) throws IOException {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                @SuppressWarnings("unused")
+                Dashboard dashboard = new Dashboard();
+                
+            }
+        });
+
+        runXAMPP();
+        runSQL();
+    }
+
     /**
      * This method loads custom fonts (ttf files etc.) from the Fonts Folder
      * so that they can be used within this application.
@@ -714,26 +719,5 @@ public class Dashboard extends JFrame {
         ge.registerFont(customFont);
         return customFont;
     } // end of show loadFont
-
-    public void hideMainDashboard() {
-        dashboardFrame.setVisible(false);
-        System.out.println("Hiding Main Dashboard!");
-    }
-    
-    public void showMainDashboard() {
-        dashboardFrame.setVisible(true);
-        toFront(); // Bring DashboardUI frame to front
-        System.out.println("Showing Main Dashboard!");
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                @SuppressWarnings("unused")
-                Dashboard dashboard = new Dashboard();
-            }
-        });
-    }
 
 } // end of class Dashboard

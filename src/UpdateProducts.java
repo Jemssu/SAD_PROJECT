@@ -36,8 +36,26 @@ public class UpdateProducts extends JFrame {
     private JTable customerTable;
     private JTextField searchBar;
     JButton button1, button2, button3, button4, button5, button6;
+    DefaultTableModel tableModel;
 
     Operations ops = new Operations();
+
+    /**
+     * This method loads custom fonts (ttf files etc.) from the Fonts Folder
+     * so that they can be used within this application.
+     * @param path
+     * @param size
+     * @return
+     * @throws IOException
+     * @throws FontFormatException
+     * @comments Note:
+     */
+    public static Font loadFont(String path, float size) throws IOException, FontFormatException {
+        Font customFont = Font.createFont(Font.TRUETYPE_FONT, new File(path)).deriveFont(size);
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        ge.registerFont(customFont);
+        return customFont;
+    } // end of show loadFont
 
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
@@ -236,7 +254,7 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 1 - Is Pressed");
+                    System.out.println("Add Product - Is Pressed");
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -250,7 +268,7 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 2 - Is Pressed");
+                    System.out.println("Rename Product - Is Pressed");
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -264,7 +282,10 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 3 - Is Pressed");
+                    System.out.println("Change Pricing - Is Pressed");
+
+                    ops.changePriceOfProduct();
+                    ops.updateProductTable(tableModel);
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -278,7 +299,11 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 4 - Is Pressed");
+                    System.out.println("Remove Product - Is Pressed");
+                    
+                    ops.removeProduct();
+                    ops.updateProductTable(tableModel);
+
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -292,7 +317,7 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 5 - Is Pressed");
+                    System.out.println("Manage Inventory - Is Pressed");
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -306,7 +331,7 @@ public class UpdateProducts extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button6.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 6 - Is Pressed");
+                    System.out.println("Exit - Is Pressed");
                 } else {
                     button6.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -382,10 +407,11 @@ public class UpdateProducts extends JFrame {
         });
 
         // Create table model
-        DefaultTableModel tableModel = new DefaultTableModel();
+        tableModel = new DefaultTableModel();
 
         // Create a table and set the model
         customerTable = new JTable(tableModel);
+        customerTable.setDefaultEditor(Object.class, null); // Disable cell editing
         JScrollPane customerScrollPane = new JScrollPane(customerTable);
         customerScrollPane.setBounds(20, 70, 790, 570);
         rightPanel.add(customerScrollPane);
@@ -396,21 +422,4 @@ public class UpdateProducts extends JFrame {
 
         ops.updateProductTable(tableModel);
     } // end of New Order
-
-    /**
-     * This method loads custom fonts (ttf files etc.) from the Fonts Folder
-     * so that they can be used within this application.
-     * @param path
-     * @param size
-     * @return
-     * @throws IOException
-     * @throws FontFormatException
-     * @comments Note:
-     */
-    public static Font loadFont(String path, float size) throws IOException, FontFormatException {
-        Font customFont = Font.createFont(Font.TRUETYPE_FONT, new File(path)).deriveFont(size);
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        ge.registerFont(customFont);
-        return customFont;
-    } // end of show loadFont
 }
