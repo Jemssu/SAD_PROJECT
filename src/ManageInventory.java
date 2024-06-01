@@ -34,15 +34,11 @@ public class ManageInventory extends JFrame {
     private Dashboard dashboard;
     JPanel rightPanel, leftPanel;
     JButton button1, button2, button3, button4, button5, button6;
+    DefaultTableModel small_InventoryTableModel;
+    DefaultTableModel large_InventoryTableModel;
 
-    /**
-     * This method is responsible for loading the image for the Icons in the Buttons Panel.
-     * @param path - source file path of the image
-     * @param width - width of the image (px)
-     * @param height - height of the image (px)
-     * @return
-     * @comments Note:
-     */
+    Operations ops = new Operations();
+
     public static ImageIcon resizeIcon(String path, int width, int height) {
         try {
             ImageIcon icon = new ImageIcon(path);
@@ -220,7 +216,11 @@ public class ManageInventory extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 1 - Is Pressed");
+                    System.out.println("Add Stock - Is Pressed");
+
+                    ops.addStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -234,7 +234,11 @@ public class ManageInventory extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 2 - Is Pressed");
+                    System.out.println("Remove Stock - Is Pressed");
+
+                    ops.removeStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -248,7 +252,11 @@ public class ManageInventory extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 3 - Is Pressed");
+                    System.out.println("Empty Stock - Is Pressed");
+
+                    ops.emptyStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -262,7 +270,11 @@ public class ManageInventory extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 4 - Is Pressed");
+                    System.out.println("Change Status - Is Pressed");
+
+                    ops.changeStockStatus();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -276,7 +288,11 @@ public class ManageInventory extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 5 - Is Pressed");
+                    System.out.println("Search Stock - Is Pressed");
+
+                    ops.searchStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -335,46 +351,105 @@ public class ManageInventory extends JFrame {
 
         manageInventoryFrame.add(rightPanel);
 
-        JLabel fullInventory_label = new JLabel("Full Inventory");
-        fullInventory_label.setBounds(5, 5, 250, 35);
-        rightPanel.add(fullInventory_label);
-
-        JButton fullFilterButton = new JButton("Filter");
-        fullFilterButton.setBounds(704, 5, 100, 30);
-        rightPanel.add(fullFilterButton);
+        JLabel largeInventory_label = new JLabel("large Inventory");
+        largeInventory_label.setBounds(5, 5, 250, 35);
+        rightPanel.add(largeInventory_label);
 
         // Create a table model for the first table
-        DefaultTableModel full_InventoryTableModel = new DefaultTableModel();
-        JTable full_InventoryTable = new JTable(full_InventoryTableModel);
-        JScrollPane full_InventoryTableScroll = new JScrollPane(full_InventoryTable);
-        full_InventoryTableScroll.setBounds(5, 40, 800, 290);
-        rightPanel.add(full_InventoryTableScroll);
+        large_InventoryTableModel = new DefaultTableModel();
+        JTable large_InventoryTable = new JTable(large_InventoryTableModel);
+        large_InventoryTable.setDefaultEditor(Object.class, null);
+        JScrollPane large_InventoryTableScroll = new JScrollPane(large_InventoryTable);
+        large_InventoryTableScroll.setBounds(5, 40, 800, 290);
+        rightPanel.add(large_InventoryTableScroll);
 
-        full_InventoryTableModel.addColumn("ID");
-        full_InventoryTableModel.addColumn("NAME");
-        full_InventoryTableModel.addColumn("STOCK LEFT");
-        full_InventoryTableModel.addColumn("LAST STOCKED");
+        large_InventoryTableModel.addColumn("PRODUCT ID");
+        large_InventoryTableModel.addColumn("NAME");
+        large_InventoryTableModel.addColumn("STOCK LEFT");
+        large_InventoryTableModel.addColumn("LAST STOCKED");
 
-        // Label for 
-        JLabel partialInventory_label = new JLabel("Partial Inventory");
-        partialInventory_label.setBounds(5, 335, 250, 35);
-        rightPanel.add(partialInventory_label);
-
-        JButton partialFilterButton = new JButton("Filter");
-        partialFilterButton.setBounds(704, 335, 100, 30);
-        rightPanel.add(partialFilterButton);
+        JLabel smallInventory_label = new JLabel("small Inventory");
+        smallInventory_label.setBounds(5, 335, 250, 35);
+        rightPanel.add(smallInventory_label);
 
         // Create a table model for the second table
-        DefaultTableModel partial_InventoryTableModel = new DefaultTableModel();
-        JTable partial_InventoryTable = new JTable(partial_InventoryTableModel);
-        JScrollPane partial_InventoryTableScroll = new JScrollPane(partial_InventoryTable);
-        partial_InventoryTableScroll.setBounds(5, 370, 800, 290);
-        rightPanel.add(partial_InventoryTableScroll);
+        small_InventoryTableModel = new DefaultTableModel();
+        JTable small_InventoryTable = new JTable(small_InventoryTableModel);
+        small_InventoryTable.setDefaultEditor(Object.class, null);
+        JScrollPane small_InventoryTableScroll = new JScrollPane(small_InventoryTable);
+        small_InventoryTableScroll.setBounds(5, 370, 800, 290);
+        rightPanel.add(small_InventoryTableScroll);
 
-        partial_InventoryTableModel.addColumn("ID");
-        partial_InventoryTableModel.addColumn("NAME");
-        partial_InventoryTableModel.addColumn("STOCK LEFT");
-        partial_InventoryTableModel.addColumn("STATUS");
+        small_InventoryTableModel.addColumn("ID");
+        small_InventoryTableModel.addColumn("NAME");
+        small_InventoryTableModel.addColumn("STOCK LEFT");
+        small_InventoryTableModel.addColumn("SUPPLIER STATUS");
+
+        ops.updateLargeInvTable(large_InventoryTableModel);
+        ops.updateSmallInvTable(small_InventoryTableModel);
+
+        JButton largeFilterButton = new JButton("Sort by");
+        largeFilterButton.setBounds(680, 5, 120, 30);
+        largeFilterButton.setBackground(Color.decode("#ff793f"));
+        // SEARCH MODEL  MODEL with LISTENER
+        largeFilterButton.getModel().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                if (model.isPressed()) {
+                    largeFilterButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("LargeToggleButton - Is Pressed");
+                } else {
+                    largeFilterButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                }
+            }
+        });
+
+        // Add ActionListener to the toggle button
+        largeFilterButton.addActionListener(new ActionListener() {
+            int sortOption = 1; // Start with sorting by name
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Toggle between sorting options (1: Name, 2: Stock, 3: Product ID)
+                sortOption = (sortOption % 3) + 1;
+                ops.filterLargeInvTable(large_InventoryTableModel, sortOption);
+            }
+        });
+
+        rightPanel.add(largeFilterButton);
+
+        JButton smallFilterButton = new JButton("Sort by");
+        smallFilterButton.setBounds(680, 335, 120, 30);
+        smallFilterButton.setBackground(Color.decode("#ff793f"));
+
+        smallFilterButton.getModel().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                if (model.isPressed()) {
+                    smallFilterButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("SmallToggleButton - Is Pressed");
+                } else {
+                    smallFilterButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                }
+            }
+        });
+
+        // Add ActionListener to the toggle button
+        smallFilterButton.addActionListener(new ActionListener() {
+            int sortOption = 1; // Start with sorting by name
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Toggle between sorting options (1: Name, 2: Stock, 3: Product ID)
+                sortOption = (sortOption % 3) + 1;
+                ops.filterSmallInvTable(small_InventoryTableModel, sortOption);
+            }
+        });
+
+        rightPanel.add(smallFilterButton);
+
     } // end of New Order
 
     /**

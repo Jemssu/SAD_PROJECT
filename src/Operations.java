@@ -7,6 +7,10 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Vector;
+
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
 import org.apache.poi.ss.usermodel.*;
@@ -223,6 +227,28 @@ public class Operations {
         
         return false;
     }
+
+    public boolean isProductActive(int product_ID) {
+        String query = "SELECT COUNT(*) FROM tbl_product WHERE product_ID = ? AND product_ActiveStatus = 'active'";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, product_ID);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    return count > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+
 
     /**
      * Checks if a product with the given type_ID and size_ID already exists in the tbl_product table.
@@ -497,6 +523,12 @@ public class Operations {
             return;
         }
 
+        // Check if product is inactive
+        if (!isProductActive(product_ID)) {
+            JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         // Show Confirmation
         int confirmation = JOptionPane.showConfirmDialog(null, "Are you sure you want to remove the product with ID " + product_ID + "?", "Confirm Remove", JOptionPane.YES_NO_OPTION);
         if (confirmation != JOptionPane.YES_OPTION) {
@@ -545,6 +577,12 @@ public class Operations {
         // Check If Product ID does exist
         if (!doesProductExist(product_ID)) {
             JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Check if product is inactive
+        if (!isProductActive(product_ID)) {
+            JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -623,6 +661,12 @@ public class Operations {
         // Check if product exists
         if (!doesProductExist(product_ID)) {
             JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Check if product is inactive
+        if (!isProductActive(product_ID)) {
+            JOptionPane.showMessageDialog(null, "Product with ID " + product_ID + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -791,58 +835,476 @@ public class Operations {
     }
     
     
-
     //----------------------------------------------------------------
     /** 
      * MANAGE INVENTORY METHODS
     */
-    public void updateLargeTable() {
+    public void updateLargeInvTable(DefaultTableModel largeInventoryTableModel) {
+        try (Connection connection = connect()) {
+            String query = "SELECT product_ID, product_Name, product_StockLeft, product_LastStocked FROM tbl_product WHERE product_ActiveStatus = 'active'";
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
 
+            // Clear existing rows
+            largeInventoryTableModel.setRowCount(0);
+
+            // Add rows from the fetched data
+            while (resultSet.next()) {
+                Object[] row = {
+                    resultSet.getInt("product_ID"),
+                    resultSet.getString("product_Name"),
+                    resultSet.getInt("product_StockLeft"),
+                    resultSet.getTimestamp("product_LastStocked")
+                };
+                largeInventoryTableModel.addRow(row);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void updateSmallTable() {
+    public void updateSmallInvTable(DefaultTableModel smallInventoryTableModel) {
+        try (Connection connection = connect()) {
+            String query = "SELECT product_ID, product_Name, product_StockLeft, product_SupplierStatus " +
+                        "FROM tbl_product " +
+                        "WHERE product_ActiveStatus = 'active' AND " +
+                        "(product_SupplierStatus = 'pending' OR product_StockLeft < 100)";
 
-    }
-
-    public void filterLargeTable() {
-        // SORTS by NAME A - Z ONCE
-        // SORTS by STOCK TWICE
-    }
-
-    public void filterSmallTable() {
-        // SORTS by NAME A - Z ONCE
-        // SORTS by STOCK TWICE
-    }
-
-
-    public void addStock(int product_ID) {
-        
-    }
-
-    public void removeStock(int product_ID) {
-
-    }
-
-    public void emptyStock(int product_ID) {
-        
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+    
+            // Clear existing rows
+            smallInventoryTableModel.setRowCount(0);
+    
+            // Add rows from the fetched data
+            while (resultSet.next()) {
+                Object[] row = {
+                    resultSet.getInt("product_ID"),
+                    resultSet.getString("product_Name"),
+                    resultSet.getInt("product_StockLeft"),
+                    resultSet.getString("product_SupplierStatus")
+                };
+                smallInventoryTableModel.addRow(row);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
     
-    public void changeStockStatus(int product_ID) {
-        // Change Status to Either Pending or None
+    public void filterLargeInvTable(DefaultTableModel largeInventoryTableModel, int sortOption) {
+        // Get the data vector from the table model
+        Vector<Vector<Object>> dataVector = new Vector<>(largeInventoryTableModel.getDataVector());
+        
+        // Sort based on the selected option
+        switch (sortOption) {
+
+            case 1: // Sort by product ID
+                Collections.sort(dataVector, Comparator.comparing(row -> (Integer) row.get(0))); // Assuming product ID is in the first column
+                break;
+            case 2: // Sort by name (A - Z)
+                Collections.sort(dataVector, Comparator.comparing(row -> (String) row.get(1))); // Assuming product name is in the second column
+                break;
+            case 3: // Sort by stock left
+                Collections.sort(dataVector, Comparator.comparing(row -> (Integer) row.get(2))); // Assuming stock left is in the third column
+                break;
+            default:
+                // Invalid option, do nothing
+                return;
+        }
+        
+        // Clear existing rows
+        largeInventoryTableModel.setRowCount(0);
+    
+        // Add sorted rows to the table model
+        for (Vector<Object> row : dataVector) {
+            largeInventoryTableModel.addRow(row);
+        }
+    
+        // Fire table data changed to notify the table model of the changes
+        largeInventoryTableModel.fireTableDataChanged();
     }
 
-    public void searchStock(int product_ID) {
+    public void filterSmallInvTable(DefaultTableModel smallInventoryTableModel, int sortOption) {
+        // Get the data vector from the table model
+        Vector<Vector<Object>> dataVector = new Vector<>(smallInventoryTableModel.getDataVector());
+        
+        // Sort based on the selected option
+        switch (sortOption) {
 
+            case 1: // Sort by product ID
+                Collections.sort(dataVector, Comparator.comparing(row -> (Integer) row.get(0))); // Assuming product ID is in the first column
+                break;
+            case 2: // Sort by name (A - Z)
+                Collections.sort(dataVector, Comparator.comparing(row -> (String) row.get(1))); // Assuming product name is in the second column
+                break;
+            case 3: // Sort by stock left
+                Collections.sort(dataVector, Comparator.comparing(row -> (Integer) row.get(2))); // Assuming stock left is in the third column
+                break;
+            default:
+                // Invalid option, do nothing
+                return;
+        }
+        
+        // Clear existing rows
+        smallInventoryTableModel.setRowCount(0);
+    
+        // Add sorted rows to the table model
+        for (Vector<Object> row : dataVector) {
+            smallInventoryTableModel.addRow(row);
+        }
+    
+        // Fire table data changed to notify the table model of the changes
+        smallInventoryTableModel.fireTableDataChanged();
     }
 
+    public void addStock() {
+        try {
+            // Ask for product ID using JOptionPane
+            String input = JOptionPane.showInputDialog(null, "Enter Product ID to add stock:", "Add Stock", JOptionPane.QUESTION_MESSAGE);
+            if (input == null || input.isEmpty()) {
+                return; // User cancelled or provided empty input
+            }
+            int productID = Integer.parseInt(input);
+    
+            // Check if Product ID exists
+            if (!doesProductExist(productID)) {
+                JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Check if product is inactive
+            if (!isProductActive(productID)) {
+                JOptionPane.showMessageDialog(null, "Product with ID " + productID + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Ask if there is a new supplier
+            int confirmSupplier = JOptionPane.showConfirmDialog(null, "Is there a new supplier for this product?", "New Supplier", JOptionPane.YES_NO_OPTION);
+            if (confirmSupplier == JOptionPane.YES_OPTION) {
+                // Ask for the supplier ID
+                String supplierInput = JOptionPane.showInputDialog(null, "Enter Supplier ID:", "Supplier ID", JOptionPane.QUESTION_MESSAGE);
+                if (supplierInput == null || supplierInput.isEmpty()) {
+                    return; // User cancelled or provided empty input
+                }
+                int supplierID = Integer.parseInt(supplierInput);
+    
+                // Check if Supplier ID exists
+                if (!doesSupplierExist(supplierID)) {
+                    JOptionPane.showMessageDialog(null, "Supplier ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+    
+                // Ask how much to add
+                String stockInput = JOptionPane.showInputDialog(null, "Enter the quantity to add:", "Add Quantity", JOptionPane.QUESTION_MESSAGE);
+                if (stockInput == null || stockInput.isEmpty()) {
+                    return; // User cancelled or provided empty input
+                }
+                int quantityToAdd = Integer.parseInt(stockInput);
+    
+                // Update product stock left and supplier ID with the new values, and set supplier status to 'none'
+                try (Connection connection = connect()) {
+                    String updateQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft + ?, last_Supplied_BY = ?, product_LastStocked = current_timestamp(), product_SupplierStatus = 'none' WHERE product_ID = ?";
+                    PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                    updateStatement.setInt(1, quantityToAdd);
+                    updateStatement.setInt(2, supplierID);
+                    updateStatement.setInt(3, productID);
+                    int rowsUpdated = updateStatement.executeUpdate();
+                    if (rowsUpdated > 0) {
+                        JOptionPane.showMessageDialog(null, "Stock added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Failed to add stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                // Ask how much to add
+                String stockInput = JOptionPane.showInputDialog(null, "Enter the quantity to add:", "Add Quantity", JOptionPane.QUESTION_MESSAGE);
+                if (stockInput == null || stockInput.isEmpty()) {
+                    return; // User cancelled or provided empty input
+                }
+                int quantityToAdd = Integer.parseInt(stockInput);
+    
+                // Update product stock left with the new value and set supplier status to 'none'
+                try (Connection connection = connect()) {
+                    String updateQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft + ?, product_LastStocked = current_timestamp(), product_SupplierStatus = 'none' WHERE product_ID = ?";
+                    PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                    updateStatement.setInt(1, quantityToAdd);
+                    updateStatement.setInt(2, productID);
+                    int rowsUpdated = updateStatement.executeUpdate();
+                    if (rowsUpdated > 0) {
+                        JOptionPane.showMessageDialog(null, "Stock added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Failed to add stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid integer.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while updating stock.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    
+    
 
+    public void removeStock() {
+        // Ask for product ID using JOptionPane
+        String input = JOptionPane.showInputDialog(null, "Enter Product ID to remove stock:", "Remove Stock", JOptionPane.QUESTION_MESSAGE);
+        if (input == null || input.isEmpty()) {
+            return; // User cancelled or provided empty input
+        }
+    
+        try {
+            int productIDInput = Integer.parseInt(input);
+    
+            // Check if product is inactive
+            if (!isProductActive(productIDInput)) {
+                JOptionPane.showMessageDialog(null, "Product with ID " + productIDInput + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Check if Product ID exists
+            if (doesProductExist(productIDInput)) {
+                // Ask how much to remove using JOptionPane
+                String removeAmountString = JOptionPane.showInputDialog(null, "Enter quantity to remove:", "Remove Stock", JOptionPane.QUESTION_MESSAGE);
+                if (removeAmountString == null || removeAmountString.isEmpty()) {
+                    return; // User cancelled or provided empty input
+                }
+                int removeAmount = Integer.parseInt(removeAmountString);
+    
+                // Update database
+                try (Connection connection = connect()) {
+                    String updateQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft - ? WHERE product_ID = ?";
+                    PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                    updateStatement.setInt(1, removeAmount);
+                    updateStatement.setInt(2, productIDInput);
+                    int rowsUpdated = updateStatement.executeUpdate();
+                    if (rowsUpdated > 0) {
+                        JOptionPane.showMessageDialog(null, "Stock removed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Failed to remove stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid integer for Product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while updating stock.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void emptyStock() {
+        // Ask for product ID using JOptionPane
+        String input = JOptionPane.showInputDialog(null, "Enter Product ID to empty stock:", "Empty Stock", JOptionPane.QUESTION_MESSAGE);
+        if (input == null || input.isEmpty()) {
+            return; // User cancelled or provided empty input
+        }
+    
+        try {
+            int productIDInput = Integer.parseInt(input);
+    
+            // Check if product is inactive
+            if (!isProductActive(productIDInput)) {
+                JOptionPane.showMessageDialog(null, "Product with ID " + productIDInput + " is already inactive!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Check if Product ID exists
+            if (doesProductExist(productIDInput)) {
+                // Confirm if user wants to empty stock
+                int confirmResult = JOptionPane.showConfirmDialog(null, "Are you sure you want to empty the stock for this product?", "Confirm Empty Stock", JOptionPane.YES_NO_OPTION);
+                if (confirmResult == JOptionPane.YES_OPTION) {
+                    // Update database to set stock left to 0
+                    try (Connection connection = connect()) {
+                        String updateQuery = "UPDATE tbl_product SET product_StockLeft = 0 WHERE product_ID = ?";
+                        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                        updateStatement.setInt(1, productIDInput);
+                        int rowsUpdated = updateStatement.executeUpdate();
+                        if (rowsUpdated > 0) {
+                            JOptionPane.showMessageDialog(null, "Stock emptied successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Failed to empty stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid integer for Product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while updating stock.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    public void changeStockStatus() {
+        // Ask for product ID using JOptionPane
+        String input = JOptionPane.showInputDialog(null, "Enter Product ID to change stock status:", "Change Stock Status", JOptionPane.QUESTION_MESSAGE);
+        if (input == null || input.isEmpty()) {
+            return; // User cancelled or provided empty input
+        }
+    
+        try {
+            int productIDInput = Integer.parseInt(input);
+    
+            // Check if Product ID exists
+            if (doesProductExist(productIDInput)) {
+                // Check if product is inactive
+                if (isProductActive(productIDInput)) {
+                    JOptionPane.showMessageDialog(null, "Product with ID " + productIDInput + " is inactive!", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+    
+                // Get current status
+                String currentStatus = getProductSupplierStatus(productIDInput);
+    
+                // Ask if user wants to change status
+                String[] options = { "none", "pending" };
+                int choice = JOptionPane.showOptionDialog(null, "Current status: " + currentStatus + "\nSelect new status:", "Change Stock Status", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+    
+                // Update status in database
+                if (choice == 0 || choice == 1) { // User selected an option
+                    String newStatus = options[choice];
+                    try (Connection connection = connect()) {
+                        String updateQuery = "UPDATE tbl_product SET product_SupplierStatus = ? WHERE product_ID = ?";
+                        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                        updateStatement.setString(1, newStatus);
+                        updateStatement.setInt(2, productIDInput);
+                        int rowsUpdated = updateStatement.executeUpdate();
+                        if (rowsUpdated > 0) {
+                            JOptionPane.showMessageDialog(null, "Stock status changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Failed to change stock status.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "An error occurred while updating stock status.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid integer for Product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void searchStock() {
+        // Ask for product ID using JOptionPane
+        String input = JOptionPane.showInputDialog(null, "Enter Product ID to search stock:", "Search Stock", JOptionPane.QUESTION_MESSAGE);
+        if (input == null || input.isEmpty()) {
+            return; // User cancelled or provided empty input
+        }
+    
+        try {
+            int productIDInput = Integer.parseInt(input);
+    
+            // Check if Product ID exists
+            if (doesProductExist(productIDInput)) {
+                // Display all details of the stock
+                String details = getStockDetails(productIDInput);
+                JOptionPane.showMessageDialog(null, "Stock Details:\n" + details, "Stock Details", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Invalid input. Please enter a valid integer for Product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public String getProductSupplierStatus(int product_id) {
+        try (Connection connection = connect()) {
+            // Prepare the SQL query to fetch the product supplier status
+            String query = "SELECT product_SupplierStatus FROM tbl_product WHERE product_ID = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, product_id);
+            
+            ResultSet resultSet = statement.executeQuery();
+    
+            // Check if any result is returned
+            if (resultSet.next()) {
+                // Extract and return the product supplier status
+                return resultSet.getString("product_SupplierStatus");
+            } else {
+                return "Product with ID " + product_id + " not found.";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "An error occurred while fetching product supplier status.";
+        }
+    }
+    
+
+    public String getStockDetails(int product_id) {
+        try (Connection connection = connect()) {
+            // Prepare the SQL query to fetch product details with supplier information
+            String query = "SELECT p.product_ID, p.type_ID, p.size_ID, p.product_Name, p.product_Price, " +
+                        "p.product_StockLeft, p.product_LastStocked, p.last_Supplied_BY, " +
+                        "p.product_SupplierStatus, p.product_ActiveStatus " +
+                        "FROM tbl_product p " +
+                        "WHERE p.product_ID = ?";
+            
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, product_id);
+            
+            ResultSet resultSet = statement.executeQuery();
+    
+            // Check if any result is returned
+            if (resultSet.next()) {
+                // Extract values from the result set
+                int productId = resultSet.getInt("product_ID");
+                int typeId = resultSet.getInt("type_ID");
+                int sizeId = resultSet.getInt("size_ID");
+                String productName = resultSet.getString("product_Name");
+                double productPrice = resultSet.getDouble("product_Price");
+                int stockLeft = resultSet.getInt("product_StockLeft");
+                String lastStocked = resultSet.getString("product_LastStocked"); // Assuming lastStocked is a string
+                int supplierId = resultSet.getInt("last_Supplied_BY");
+                String supplierStatus = resultSet.getString("product_SupplierStatus");
+                String activeStatus = resultSet.getString("product_ActiveStatus");
+    
+                // Prepare the details string
+                StringBuilder details = new StringBuilder();
+                details.append("Product ID: ").append(productId).append("\n");
+                details.append("Type ID: ").append(typeId).append("\n");
+                details.append("Size ID: ").append(sizeId).append("\n");
+                details.append("Name: ").append(productName).append("\n");
+                details.append("Price: ").append(productPrice).append("\n");
+                details.append("Stock Left: ").append(stockLeft).append("\n");
+                details.append("Last Stock: ").append(lastStocked).append("\n");
+                details.append("Supplier ID: ").append(supplierId).append("\n");
+                details.append("Supplier Status: ").append(supplierStatus).append("\n");
+                details.append("Active Status: ").append(activeStatus);
+    
+                return details.toString();
+            } else {
+                return "Product with ID " + product_id + " not found.";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "An error occurred while fetching product details.";
+        }
+    }
+    
 
     // WORK IN PROGRESS / FUTURE ADDITIONS
 
     /**
+     *  Might do some tweaks n stuffs sa ADDING A PRODUCT na button
+     */
+
+    /**
      * ABILITY TO DO THE FOLLOWING
+     * 
      * -> ADD MORE TYPE / ID FOR ADMIN
      * -> ADD MORE SIZE / ID FOR ADMIN
      * -> ADD MORE SUPPLIER / ID FOR ADMIN
+     * 
+     *  -> ADD LOGGING / WHO AND WHEN DID A PERSON GO IN, maybe through text file...
      */
 }
