@@ -5,8 +5,12 @@
         "lib/**/*.jar"
     ],
     "cSpell.words": [
+        "jdbc",
         "mysqld",
+        "pstmt",
         "salesofficer",
-        "XAMPP"
+        "XAMPP",
+        "XSSF",
+        "yanez"
     ]
 }
