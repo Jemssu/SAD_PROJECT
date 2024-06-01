@@ -41,6 +41,7 @@ public class Dashboard extends JFrame {
      * Method to run XAMPP.
      */
     private static void runXAMPP() throws IOException {
+        @SuppressWarnings("unused")
         Process runXAMPP = Runtime.getRuntime().exec("D://xampp//xampp_start.exe");
         System.out.println("XAMPP started.");
     }
@@ -49,6 +50,7 @@ public class Dashboard extends JFrame {
      * Method to run MySQL.
      */
     private static void runSQL() throws IOException {
+        @SuppressWarnings("unused")
         Process runSQL = Runtime.getRuntime().exec("D://xampp//mysql//bin//mysqld.exe");
         System.out.println("MySQL started.");
     }
