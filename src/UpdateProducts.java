@@ -188,7 +188,7 @@ public class UpdateProducts extends JFrame {
          * button2 - Rename Customer
          * button3 - Change Contact Number
          * button4 - Remove Customer / But Not Really
-         * button5 - Cancel / Undo Current Changes
+         * button5 - Excel SAVE? -- FIXING
          * button6 - EXIT
          * @Comment Note:
          */
@@ -206,7 +206,7 @@ public class UpdateProducts extends JFrame {
         button2 = new ImageButton(resizeIcon("icons/up_rename.png", 100, 100), 50);
         button3 = new ImageButton(resizeIcon("icons/up_change.png", 100, 100), 50);
         button4 = new ImageButton(resizeIcon("icons/up_remove.png", 100, 100), 50);
-        button5 = new ImageButton(resizeIcon("icons/all_cancel.png", 100, 100), 50);
+        button5 = new ImageButton(resizeIcon("icons/gr_excel.png", 100, 100), 50);
         button6 = new ImageButton(resizeIcon("icons/back_exit.png", 100, 100), 50);
 
         // Set Text of Buttons
@@ -214,7 +214,7 @@ public class UpdateProducts extends JFrame {
         button2.setText("Rename Product");
         button3.setText("Change Pricing");
         button4.setText("Delete Product");
-        button5.setText("Cancel");
+        button5.setText("Save to Excel");
         button6.setText("Exit");
 
         // Adjust text height for buttons
@@ -324,6 +324,8 @@ public class UpdateProducts extends JFrame {
                 if (model.isPressed()) {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Manage Inventory - Is Pressed");
+
+                    ops.saveProductTableModelToExcel();
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -368,9 +370,6 @@ public class UpdateProducts extends JFrame {
         leftPanel.add(button3);
         leftPanel.add(button4);
         leftPanel.add(button5);
-        // DISABLE button5 as default.
-        button5.setEnabled(false);
-        button5.setBackground(Color.decode("#84817a"));
         leftPanel.add(button6);
 
         /**This is the Right portion of the GUI. 
@@ -412,6 +411,15 @@ public class UpdateProducts extends JFrame {
             }
         });
 
+        // Add ActionListener to the search button
+        searchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String query = searchBar.getText().trim();
+                ops.searchAndUpdateTable(tableModel, query);
+            }
+        });
+
         // Create table model
         tableModel = new DefaultTableModel();
 
@@ -428,4 +436,9 @@ public class UpdateProducts extends JFrame {
 
         ops.updateProductTable(tableModel);
     } // end of New Order
+
+    
 }
+
+
+// SEARCH BUTTON NEEDS FIXING

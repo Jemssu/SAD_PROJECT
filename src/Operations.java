@@ -1,15 +1,18 @@
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Operations {
-
-    
 
     /**
      * Establishes Connection to the database
@@ -681,29 +684,113 @@ public class Operations {
         }
     }
 
+    // Method to update the table with the initial data
     public void updateProductTable(DefaultTableModel tableModel) {
-        // Clear the existing rows
-        tableModel.setRowCount(0);
-
-        // SQL query to select data from tbl_product
         String query = "SELECT product_ID, product_Name, product_Price FROM tbl_product WHERE product_ActiveStatus = 'active'";
+        updateTableWithQuery(tableModel, query);
+    }
+
+    // Method to perform search and update the table
+    public void searchAndUpdateTable(DefaultTableModel tableModel, String searchQuery) {
+        if (searchQuery.isEmpty()) {
+            updateProductTable(tableModel);
+        } else {
+            String query = "SELECT product_ID, product_Name, product_Price FROM tbl_product " +
+                        "WHERE product_ActiveStatus = 'active' AND " +
+                        "(product_ID LIKE ? OR product_Name LIKE ? OR product_Price LIKE ?)";
+            String searchPattern = "%" + searchQuery + "%";
+            updateTableWithQuery(tableModel, query, searchPattern, searchPattern, searchPattern);
+        }
+    }
+
+    // Method to update the table model with data from the database
+    private void updateTableWithQuery(DefaultTableModel tableModel, String query, String... params) {
+        tableModel.setRowCount(0); // Clear existing rows
 
         try (Connection conn = connect();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query)) {
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-            // Iterate through the result set and add rows to the table model
-            while (rs.next()) {
-                int productID = rs.getInt("product_ID");
-                String productName = rs.getString("product_Name");
-                double productPrice = rs.getDouble("product_Price");
-                tableModel.addRow(new Object[]{productID, productName, productPrice});
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    pstmt.setString(i + 1, params[i]);
+                }
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int productID = rs.getInt("product_ID");
+                    String productName = rs.getString("product_Name");
+                    double productPrice = rs.getDouble("product_Price");
+                    tableModel.addRow(new Object[]{productID, productName, productPrice});
+                }
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+    public void saveProductTableModelToExcel() {
+        String query = "SELECT * FROM tbl_product";
+    
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+    
+            // Create a new workbook and sheet
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Products");
+    
+            // Get metadata to create headers
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            
+            // Create the header row
+            Row headerRow = sheet.createRow(0);
+            for (int i = 1; i <= columnCount; i++) {
+                Cell cell = headerRow.createCell(i - 1);
+                cell.setCellValue(metaData.getColumnLabel(i));
+                cell.setCellStyle(getHeaderCellStyle(workbook));
+            }
+    
+            // Populate data rows
+            int rowNum = 1;
+            while (rs.next()) {
+                Row row = sheet.createRow(rowNum++);
+                for (int i = 1; i <= columnCount; i++) {
+                    Cell cell = row.createCell(i - 1);
+                    cell.setCellValue(rs.getString(i));
+                }
+            }
+    
+            // Resize all columns to fit the content size
+            for (int i = 0; i < columnCount; i++) {
+                sheet.autoSizeColumn(i);
+            }
+    
+            // Write the workbook to a file
+            try (FileOutputStream fileOut = new FileOutputStream("Products.xlsx")) {
+                workbook.write(fileOut);
+            }
+    
+            // Closing the workbook
+            workbook.close();
+    
+            System.out.println("Data exported to Excel successfully.");
+    
+        } catch (SQLException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private CellStyle getHeaderCellStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+    
+    
 
     //----------------------------------------------------------------
     /** 
@@ -729,7 +816,7 @@ public class Operations {
 
 
     public void addStock(int product_ID) {
-
+        
     }
 
     public void removeStock(int product_ID) {
