@@ -95,7 +95,7 @@ public class AdminStuff extends JFrame{
      * @param dashboard
      * @comments Note:
      */
-    public AdminStuff(String access_level, Dashboard dashboard) {
+    public AdminStuff(String access_level, Dashboard dashboard, int adminID) {
         System.out.println("Opening Admin Panel with access level " + access_level);
 
         this.dashboard = dashboard;
@@ -220,11 +220,16 @@ public class AdminStuff extends JFrame{
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Type - Is Pressed");
-
-                    ops.admin_addType();
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_addType();
             }
         });
         
@@ -237,10 +242,17 @@ public class AdminStuff extends JFrame{
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Size - Is Pressed");
 
-                    ops.admin_addSize();
+                    
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_addSize();
             }
         });
 
@@ -253,10 +265,17 @@ public class AdminStuff extends JFrame{
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Supplier - Is Pressed");
 
-                    ops.admin_addSupplier();
+                    
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_addSupplier();
             }
         });
 
@@ -269,10 +288,17 @@ public class AdminStuff extends JFrame{
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Modify Type - Is Pressed");
 
-                    ops.admin_modifyType();
+                    
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_modifyType();
             }
         });
 
@@ -285,10 +311,17 @@ public class AdminStuff extends JFrame{
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Modify Size - Is Pressed");
 
-                    ops.admin_modifySize();
+                    
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_modifySize();
             }
         });
 
@@ -301,10 +334,17 @@ public class AdminStuff extends JFrame{
                     button6.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Modify Supplier - Is Pressed");
 
-                    ops.admin_modifySupplier();
+                    
                 } else {
                     button6.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button6.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_modifySupplier();
             }
         });
 
@@ -385,10 +425,17 @@ public class AdminStuff extends JFrame{
                     button7.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Inactive Orders - Is Pressed");
 
-                    ops.admin_seeInactiveOrders();
+                    
                 } else {
                     button7.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button7.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_seeInactiveOrders();
             }
         });
         
@@ -401,10 +448,17 @@ public class AdminStuff extends JFrame{
                     button8.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Inactive Customers - Is Pressed");
 
-                    ops.admin_seeInactiveCustomers();
+                    
                 } else {
                     button8.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button8.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_seeInactiveCustomers();
             }
         });
 
@@ -417,10 +471,17 @@ public class AdminStuff extends JFrame{
                     button9.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Inactive Products - Is Pressed");
 
-                    ops.admin_seeInactiveProducts();
+                    
                 } else {
                     button9.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button9.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_seeInactiveProducts();
             }
         });
 
@@ -433,10 +494,17 @@ public class AdminStuff extends JFrame{
                     button10.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add New Employee - Is Pressed");
 
-                    ops.admin_addNewEmployee();
+                    
                 } else {
                     button10.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button10.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_addNewEmployee(adminID);
             }
         });
 
@@ -449,10 +517,17 @@ public class AdminStuff extends JFrame{
                     button11.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Modify Employee - Is Pressed");
 
-                    ops.admin_modifyEmployee();
+                    
                 } else {
                     button11.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button11.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.admin_modifyEmployee();
             }
         });
 
@@ -470,7 +545,7 @@ public class AdminStuff extends JFrame{
             }
         });
 
-        // BUTTON 6 MODEL with ACTION LISTENER (EXIT)
+        // BUTTON 12 MODEL with ACTION LISTENER (EXIT)
         button12.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

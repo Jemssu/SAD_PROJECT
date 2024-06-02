@@ -7,9 +7,12 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Vector;
+import java.util.stream.IntStream;
 
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
@@ -101,7 +104,6 @@ public class Operations {
         }
         return -1; // Return -1 if not found or an error occurs
     }
-
 
     /**
      * Gets the Access level based on ID
@@ -1396,6 +1398,7 @@ public class Operations {
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
                 try (ResultSet rs = pstmt.executeQuery()) {
                     JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
                     JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Type to Modify", JOptionPane.PLAIN_MESSAGE);
 
                     int selectedRow = table.getSelectedRow();
@@ -1433,6 +1436,7 @@ public class Operations {
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
                 try (ResultSet rs = pstmt.executeQuery()) {
                     JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
                     JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Size to Modify", JOptionPane.PLAIN_MESSAGE);
     
                     int selectedRow = table.getSelectedRow();
@@ -1471,6 +1475,7 @@ public class Operations {
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
                 try (ResultSet rs = pstmt.executeQuery()) {
                     JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
                     JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Supplier to Modify", JOptionPane.PLAIN_MESSAGE);
     
                     int selectedRow = table.getSelectedRow();
@@ -1530,19 +1535,69 @@ public class Operations {
     }
 
     public void admin_seeInactiveOrders() {
-        // tablemodel all 'inactive' orders 
+        try (Connection conn = connect()) {
+            String query = "SELECT * FROM tbl_transaction WHERE transaction_ActiveStatus = 'inactive'";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Inactive Transaction", JOptionPane.PLAIN_MESSAGE);
 
-        // allows user to select from table and
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No transaction selected.");
+                        return;
+                    }
 
-        // make them active again
+                    int productId = (int) table.getValueAt(selectedRow, 0);
+                    int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to make this transaction active again?", "Confirm", JOptionPane.YES_NO_OPTION);
+                    if (option == JOptionPane.YES_OPTION) {
+                        String updateQuery = "UPDATE tbl_transaction SET transaction_ActiveStatus = 'active' WHERE transaction_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, productId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Transaction made active again successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while retrieving transaction customer.");
+        }
     }
 
     public void admin_seeInactiveCustomers() {
-        // tablemodel all 'inactive' customers 
+        try (Connection conn = connect()) {
+            String query = "SELECT * FROM tbl_customer WHERE customer_ActiveStatus = 'inactive'";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Inactive Customers", JOptionPane.PLAIN_MESSAGE);
 
-        // allows user to select from table and
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No customer selected.");
+                        return;
+                    }
 
-        // make them active again
+                    int productId = (int) table.getValueAt(selectedRow, 0);
+                    int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to make this customer active again?", "Confirm", JOptionPane.YES_NO_OPTION);
+                    if (option == JOptionPane.YES_OPTION) {
+                        String updateQuery = "UPDATE tbl_customer SET customer_ActiveStatus = 'active' WHERE customer_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, productId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Customer made active again successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while retrieving inactive customer.");
+        }
     }
 
     public void admin_seeInactiveProducts() {
@@ -1551,6 +1606,7 @@ public class Operations {
             try (PreparedStatement pstmt = conn.prepareStatement(query)) {
                 try (ResultSet rs = pstmt.executeQuery()) {
                     JTable table = new JTable(buildTableModel(rs));
+                    table.setDefaultEditor(Object.class, null); // Disable cell editing
                     JOptionPane.showMessageDialog(null, new JScrollPane(table), "Inactive Products", JOptionPane.PLAIN_MESSAGE);
 
                     int selectedRow = table.getSelectedRow();
@@ -1577,13 +1633,301 @@ public class Operations {
         }
     }
 
-    public void admin_addNewEmployee() {
-
+    public boolean doesEmployeeExist(String firstName, String lastName) {
+        String query = "SELECT * FROM tbl_employee WHERE employee_FirstName = ? AND employee_LastName = ?";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, firstName);
+            stmt.setString(2, lastName);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
+    public boolean doesLoginExist(String username, String password) {
+        return true;
+    }
+
+    public void admin_addNewEmployee(int currentAdminId) {
+        String firstName, lastName, contactNum;
+        while (true) {
+            firstName = JOptionPane.showInputDialog("Enter Employee First Name:");
+            if (firstName == null || firstName.trim().isEmpty()) {
+                // If canceled or left empty, exit the method
+                return;
+            }
+            
+            lastName = JOptionPane.showInputDialog("Enter Employee Last Name:");
+            if (lastName == null || lastName.trim().isEmpty()) {
+                // If canceled or left empty, exit the method
+                return;
+            }
+
+            if (doesEmployeeExist(firstName, lastName)) {
+                JOptionPane.showMessageDialog(null, "Employee already exists!");
+                return;
+            }
+
+            contactNum = JOptionPane.showInputDialog("Enter Employee Contact Number:");
+            if (contactNum != null && contactNum.startsWith("639") && contactNum.length() == 12) {
+                break;
+            } else {
+                JOptionPane.showMessageDialog(null, "Contact number must start with '639' and be 12 characters long.");
+            }
+        }
+    
+        String[] accessLevels = getAccessLevels();
+        if (accessLevels.length == 0) {
+            JOptionPane.showMessageDialog(null, "No access levels available.");
+            return;
+        }
+        String role = (String) JOptionPane.showInputDialog(null, "Select Employee Role:", "Role Selection",
+                JOptionPane.QUESTION_MESSAGE, null, accessLevels, accessLevels[0]);
+    
+        String username = (firstName.charAt(0) + lastName).toLowerCase();
+        String password = "changeme";
+    
+        int response = JOptionPane.showConfirmDialog(null, "Do you wish to add the employee?", "Confirm",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (response == JOptionPane.YES_OPTION) {
+            Integer loginId = addLogin(username, password, role);
+            if (loginId != null && addEmployee(firstName, lastName, contactNum, loginId, currentAdminId)) {
+                JOptionPane.showMessageDialog(null, "Employee added successfully!");
+                
+                // Add the user to admin table if the role is "admin", "manager", or "owner"
+                if (role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("manager") || role.equalsIgnoreCase("owner")) {
+                    addAdmin(firstName, lastName);
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Error adding employee.");
+            }
+        }
+    }
+    
+    private String[] getAccessLevels() {
+        String query = "SELECT DISTINCT login_AccessLevel FROM tbl_login";
+        List<String> accessLevels = new ArrayList<>();
+        try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                accessLevels.add(rs.getString("login_AccessLevel"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return accessLevels.toArray(new String[0]);
+    }
+
+    private Integer addLogin(String username, String password, String accessLevel) {
+        String query = "INSERT INTO tbl_login (login_Username, login_Password, login_AccessLevel) VALUES (?, ?, ?)";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+            stmt.setString(3, accessLevel);
+            stmt.executeUpdate();
+
+            ResultSet rs = stmt.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private boolean addEmployee(String firstName, String lastName, String contactNum, int loginId, int adminId) {
+        String query = "INSERT INTO tbl_employee (employee_ID, employee_FirstName, employee_LastName, employee_ContactNum, admin_ID) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, loginId); // Set the loginId as employee_ID
+            stmt.setString(2, firstName);
+            stmt.setString(3, lastName);
+            stmt.setString(4, contactNum);
+            stmt.setInt(5, adminId);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private void addAdmin(String firstName, String lastName) {
+        String query = "INSERT INTO tbl_admin (admin_FirstName, admin_LastName) VALUES (?, ?)";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, firstName);
+            stmt.setString(2, lastName);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
     public void admin_modifyEmployee() {
+        boolean justviewing = false;
+        try {
+            Connection conn = connect();
+            Statement stmt = conn.createStatement();
+    
+            // Prompt to select employee
+            ResultSet rs = stmt.executeQuery("SELECT * FROM tbl_employee");
+            JComboBox<String> employeeComboBox = new JComboBox<>();
+            while (rs.next()) {
+                String employeeFullName = rs.getString("employee_FirstName") + " " + rs.getString("employee_LastName");
+                employeeComboBox.addItem(employeeFullName);
+            }
+            rs.close();
+    
+            String[] options = {"Employee Details", "Login Details", "Full Details"}; // Adding the third option
+            int choice = JOptionPane.showOptionDialog(null, "Select action:", "Modify Employee",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+    
+                    if (choice == JOptionPane.CLOSED_OPTION) {
+                        // If the dialog is closed without making a selection, exit the method
+                        return;
+                    }
+                    
+            String selectedEmployee = (String) JOptionPane.showInputDialog(null, "Select an employee:",
+                    "Modify Employee", JOptionPane.QUESTION_MESSAGE, null, employeeComboBox.getItemCount() > 0 ? IntStream.range(0, employeeComboBox.getItemCount()).mapToObj(employeeComboBox::getItemAt).toArray() : null, null);
+    
+            if (selectedEmployee != null) {
+                int employeeID = 0;
+                rs = stmt.executeQuery("SELECT * FROM tbl_employee WHERE CONCAT(employee_FirstName, ' ', employee_LastName) = '" + selectedEmployee + "'");
+                if (rs.next()) {
+                    employeeID = rs.getInt("employee_ID");
+                }
+                rs.close();
+    
+                boolean modificationMade = false; // Flag to track if any modification is made
+    
+                if (choice == 0) { // Employee Details
+                    String[] employeeOptions = {"First Name", "Last Name", "Contact Number"};
+                    int empChoice = JOptionPane.showOptionDialog(null, "Select detail to modify:", "Modify Employee Details",
+                            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, employeeOptions, employeeOptions[0]);
+    
+                    if (empChoice == 0) { // First Name
+                        String newFirstName = JOptionPane.showInputDialog(null, "Enter new First Name:", "Modify First Name", JOptionPane.QUESTION_MESSAGE);
+                        if (newFirstName != null) { // Check if user cancels or closes the input dialog
+                            if (!newFirstName.trim().isEmpty()) {
+                                stmt.executeUpdate("UPDATE tbl_employee SET employee_FirstName = '" + newFirstName + "' WHERE employee_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Invalid Name.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    } else if (empChoice == 1) { // Last Name
+                        String newLastName = JOptionPane.showInputDialog(null, "Enter new Last Name:", "Modify Last Name", JOptionPane.QUESTION_MESSAGE);
+                        if (newLastName != null) { // Check if user cancels or closes the input dialog
+                            if (!newLastName.trim().isEmpty()) {
+                                stmt.executeUpdate("UPDATE tbl_employee SET employee_LastName = '" + newLastName + "' WHERE employee_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Invalid Name.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    } else if (empChoice == 2) { // Contact Number
+                        String newContactNum = JOptionPane.showInputDialog(null, "Enter new Contact Number:", "Modify Contact Number", JOptionPane.QUESTION_MESSAGE);
+                        if (newContactNum != null) { // Check if user cancels or closes the input dialog
+                            if (newContactNum.matches("^639\\d{9}$")) {
+                                stmt.executeUpdate("UPDATE tbl_employee SET employee_ContactNum = '" + newContactNum + "' WHERE employee_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Must Start with 639 and must be 12 Digits.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    }
+                } else if (choice == 1) { // Login Details
+                    String[] loginOptions = {"Username", "Password", "Access Level"};
+                    int loginChoice = JOptionPane.showOptionDialog(null, "Select detail to modify:", "Modify Login Details",
+                            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, loginOptions, loginOptions[0]);
+                
+                    if (loginChoice == 0) { // Username
+                        String newUsername = JOptionPane.showInputDialog(null, "Enter new Username:", "Modify Username", JOptionPane.QUESTION_MESSAGE);
+                        if (newUsername != null) { // Check if user cancels or closes the input dialog
+                            if (!newUsername.trim().isEmpty()) {
+                                stmt.executeUpdate("UPDATE tbl_login SET login_Username = '" + newUsername + "' WHERE login_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Invalid Name.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    } else if (loginChoice == 1) { // Password
+                        String newPassword = JOptionPane.showInputDialog(null, "Enter new Password:", "Modify Password", JOptionPane.QUESTION_MESSAGE);
+                        if (newPassword != null) { // Check if user cancels or closes the input dialog
+                            if (!newPassword.trim().isEmpty()) {
+                                stmt.executeUpdate("UPDATE tbl_login SET login_Password = '" + newPassword + "' WHERE login_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Invalid Name.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    } else if (loginChoice == 2) { // Access Level
+                        String newAccessLevel = JOptionPane.showInputDialog(null, "Enter new Access Level:", "Modify Access Level", JOptionPane.QUESTION_MESSAGE);
+                        if (newAccessLevel != null) { // Check if user cancels or closes the input dialog
+                            if (!newAccessLevel.trim().isEmpty()) {
+                                stmt.executeUpdate("UPDATE tbl_login SET login_AccessLevel = '" + newAccessLevel + "' WHERE login_ID = " + employeeID);
+                                modificationMade = true; // Set flag indicating modification made
+                
+                                // Check if the new access level is admin, manager, or employee
+                                if (newAccessLevel.equalsIgnoreCase("admin") || newAccessLevel.equalsIgnoreCase("manager") || newAccessLevel.equalsIgnoreCase("employee")) {
+                                    // Get the first name and last name of the employee
+                                    ResultSet employeeDetails = stmt.executeQuery("SELECT employee_FirstName, employee_LastName FROM tbl_employee WHERE employee_ID = " + employeeID);
+                                    if (employeeDetails.next()) {
+                                        String firstName = employeeDetails.getString("employee_FirstName");
+                                        String lastName = employeeDetails.getString("employee_LastName");
+                                        
+                                        // Insert the employee into tbl_admin if they are not already there
+                                        ResultSet adminCheck = stmt.executeQuery("SELECT * FROM tbl_admin WHERE admin_ID = " + employeeID);
+                                        if (!adminCheck.next()) {
+                                            stmt.executeUpdate("INSERT INTO tbl_admin (admin_ID, admin_FirstName, admin_LastName) VALUES (" + employeeID + ", '" + firstName + "', '" + lastName + "')");
+                                        }
+                                    }
+                                } else {
+                                    // Remove the employee from tbl_admin if they are there
+                                    stmt.executeUpdate("DELETE FROM tbl_admin WHERE admin_ID = " + employeeID);
+                                }
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Invalid Name.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    }
+                } else if (choice == 2) { // Full Details
+                    justviewing = true;
+                    // Display full details including both employee and login details
+                    rs = stmt.executeQuery("SELECT * FROM tbl_employee e JOIN tbl_login l ON e.employee_ID = l.login_ID WHERE e.employee_ID = " + employeeID);
+                    if (rs.next()) {
+                        StringBuilder fullDetails = new StringBuilder();
+                        fullDetails.append("Employee ID: ").append(rs.getInt("employee_ID")).append("\n");
+                        fullDetails.append("First Name: ").append(rs.getString("employee_FirstName")).append("\n");
+                        fullDetails.append("Last Name: ").append(rs.getString("employee_LastName")).append("\n");
+                        fullDetails.append("Contact Number: ").append(rs.getString("employee_ContactNum")).append("\n");
+                        fullDetails.append("Username: ").append(rs.getString("login_Username")).append("\n");
+                        fullDetails.append("Username: ").append(rs.getString("login_Password")).append("\n");
+                        fullDetails.append("Access Level: ").append(rs.getString("login_AccessLevel")).append("\n");
+    
+                        JOptionPane.showMessageDialog(null, fullDetails.toString(), "Employee Details", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
 
+                if (justviewing) {
+                    return;
+                } else {
+                    if (modificationMade) {
+                        JOptionPane.showMessageDialog(null, "Employee details modified successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "No modifications made.", "Information", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }    
+            }
+    
+            stmt.close();
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
+    
 
     // WORK IN PROGRESS / FUTURE ADDITIONS
 

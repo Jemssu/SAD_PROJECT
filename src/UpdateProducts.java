@@ -256,11 +256,18 @@ public class UpdateProducts extends JFrame {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Product - Is Pressed");
 
-                    ops.addProduct();
-                    ops.updateProductTable(tableModel);
+                    
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.addProduct();
+                    ops.updateProductTable(tableModel);
             }
         });
         
@@ -273,11 +280,18 @@ public class UpdateProducts extends JFrame {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Rename Product - Is Pressed");
 
-                    ops.renameProduct();
-                    ops.updateProductTable(tableModel);
+                    
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.renameProduct();
+                    ops.updateProductTable(tableModel);
             }
         });
 
@@ -290,11 +304,17 @@ public class UpdateProducts extends JFrame {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Change Pricing - Is Pressed");
 
-                    ops.changePriceOfProduct();
-                    ops.updateProductTable(tableModel);
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.changePriceOfProduct();
+                    ops.updateProductTable(tableModel);
             }
         });
 
@@ -306,13 +326,18 @@ public class UpdateProducts extends JFrame {
                 if (model.isPressed()) {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Remove Product - Is Pressed");
-                    
-                    ops.removeProduct();
-                    ops.updateProductTable(tableModel);
 
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.removeProduct();
+                    ops.updateProductTable(tableModel);
             }
         });
 
@@ -325,10 +350,17 @@ public class UpdateProducts extends JFrame {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Manage Inventory - Is Pressed");
 
-                    ops.saveProductTableModelToExcel();
+                    
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.saveProductTableModelToExcel();
             }
         });
 

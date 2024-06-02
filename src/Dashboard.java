@@ -35,6 +35,7 @@ public class Dashboard extends JFrame {
     @SuppressWarnings("unused")
     private AdminStuff adminStuff;
     JButton adminButton;
+    String username, password;
 
     ButtonModel loginModel;
     
@@ -541,8 +542,8 @@ public class Dashboard extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (e.getSource() == loginButton) { // Check if the source of the event is the login button
-                    String username = usernameField.getText();
-                    String password = new String(passwordField.getPassword());
+                    username = usernameField.getText();
+                    password = new String(passwordField.getPassword());
 
                     if (username.isEmpty() || password.isEmpty()) {
                         JOptionPane.showMessageDialog(null, "Please enter both username and password", "Error", JOptionPane.ERROR_MESSAGE);
@@ -671,6 +672,9 @@ public class Dashboard extends JFrame {
         adminButton.setEnabled(false);
         adminButton.setVisible(false); // Hide it instead of removing
     }
+
+    username = "";
+    password = "";
     } // end of hideDashboard_Welcome_Form
 
     /**
@@ -730,7 +734,7 @@ public class Dashboard extends JFrame {
                     adminButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Admin - Is Pressed");
 
-                    adminStuff = new AdminStuff(accessLevel, Dashboard.this);
+                    adminStuff = new AdminStuff(accessLevel, Dashboard.this, ops.getLoginID(username, password));
                     // Update the previousPressedState and Disables the Button
                     previousPressedState5 = currentPressedState5;
                     // Freeze the dashboardFrame until newOrder is closed

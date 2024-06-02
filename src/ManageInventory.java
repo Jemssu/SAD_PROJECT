@@ -218,12 +218,19 @@ public class ManageInventory extends JFrame {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Add Stock - Is Pressed");
 
-                    ops.addStock();
-                    ops.updateLargeInvTable(large_InventoryTableModel);
-                    ops.updateSmallInvTable(small_InventoryTableModel);
+                    
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.addStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
             }
         });
         
@@ -236,12 +243,19 @@ public class ManageInventory extends JFrame {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Remove Stock - Is Pressed");
 
-                    ops.removeStock();
-                    ops.updateLargeInvTable(large_InventoryTableModel);
-                    ops.updateSmallInvTable(small_InventoryTableModel);
+                    
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.removeStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
             }
         });
 
@@ -254,12 +268,19 @@ public class ManageInventory extends JFrame {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Empty Stock - Is Pressed");
 
-                    ops.emptyStock();
-                    ops.updateLargeInvTable(large_InventoryTableModel);
-                    ops.updateSmallInvTable(small_InventoryTableModel);
+                    
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.emptyStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
             }
         });
 
@@ -272,12 +293,19 @@ public class ManageInventory extends JFrame {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Change Status - Is Pressed");
 
-                    ops.changeStockStatus();
-                    ops.updateLargeInvTable(large_InventoryTableModel);
-                    ops.updateSmallInvTable(small_InventoryTableModel);
+                    
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.changeStockStatus();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
             }
         });
 
@@ -290,12 +318,19 @@ public class ManageInventory extends JFrame {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Search Stock - Is Pressed");
 
-                    ops.searchStock();
-                    ops.updateLargeInvTable(large_InventoryTableModel);
-                    ops.updateSmallInvTable(small_InventoryTableModel);
+                    
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.searchStock();
+                    ops.updateLargeInvTable(large_InventoryTableModel);
+                    ops.updateSmallInvTable(small_InventoryTableModel);
             }
         });
 
