@@ -431,7 +431,9 @@ public class AdminStuff extends JFrame{
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button10.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 10 - Is Pressed");
+                    System.out.println("Add New Employee - Is Pressed");
+
+                    ops.admin_addNewEmployee();
                 } else {
                     button10.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
@@ -445,7 +447,9 @@ public class AdminStuff extends JFrame{
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button11.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 11 - Is Pressed");
+                    System.out.println("Modify Employee - Is Pressed");
+
+                    ops.admin_modifyEmployee();
                 } else {
                     button11.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
