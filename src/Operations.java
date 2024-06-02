@@ -1045,9 +1045,6 @@ public class Operations {
         }
     }
     
-    
-    
-
     public void removeStock() {
         // Ask for product ID using JOptionPane
         String input = JOptionPane.showInputDialog(null, "Enter Product ID to remove stock:", "Remove Stock", JOptionPane.QUESTION_MESSAGE);
@@ -1290,7 +1287,303 @@ public class Operations {
             return "An error occurred while fetching product details.";
         }
     }
+
+    //----------------------------------------------------------------
+    /**
+     * ADMIN PANEL
+     */
+
+    public void admin_addType() {
+        String typeName = JOptionPane.showInputDialog("Enter the name of the type:");
+        if (typeName == null || typeName.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Type name cannot be empty.");
+            return;
+        }
+
+        try (Connection conn = connect()) {
+            String query = "SELECT type_ID FROM tbl_type WHERE type_Name = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, typeName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        JOptionPane.showMessageDialog(null, "Type already exists in the database.");
+                    } else {
+                        String insert = "INSERT INTO tbl_type (type_Name) VALUES (?)";
+                        try (PreparedStatement pstmtInsert = conn.prepareStatement(insert)) {
+                            pstmtInsert.setString(1, typeName);
+                            pstmtInsert.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Type added successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while adding the type.");
+        }
+    }
+
+    public void admin_addSize() {
+        String sizeLength = JOptionPane.showInputDialog("Enter the size length:");
+        if (sizeLength == null || sizeLength.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Size length cannot be empty.");
+            return;
+        }
+
+        try (Connection conn = connect()) {
+            String query = "SELECT size_ID FROM tbl_size WHERE size_length = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, sizeLength);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        JOptionPane.showMessageDialog(null, "Size length already exists in the database.");
+                    } else {
+                        String insert = "INSERT INTO tbl_size (size_length) VALUES (?)";
+                        try (PreparedStatement pstmtInsert = conn.prepareStatement(insert)) {
+                            pstmtInsert.setString(1, sizeLength);
+                            pstmtInsert.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Size added successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while adding the size.");
+        }
+    }
+
+    public void admin_addSupplier() {
+        String supplierName = JOptionPane.showInputDialog("Enter the name of the supplier:");
+        if (supplierName == null || supplierName.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Supplier name cannot be empty.");
+            return;
+        }
+
+        try (Connection conn = connect()) {
+            String query = "SELECT supplier_ID FROM tbl_supplier WHERE supplier_Name = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, supplierName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        JOptionPane.showMessageDialog(null, "Supplier already exists in the database.");
+                    } else {
+                        String supplierAddress = JOptionPane.showInputDialog("Enter the address of the supplier:");
+                        if (supplierAddress == null || supplierAddress.trim().isEmpty()) {
+                            JOptionPane.showMessageDialog(null, "Supplier address cannot be empty.");
+                            return;
+                        }
+
+                        String insert = "INSERT INTO tbl_supplier (supplier_Name, supplier_Address) VALUES (?, ?)";
+                        try (PreparedStatement pstmtInsert = conn.prepareStatement(insert)) {
+                            pstmtInsert.setString(1, supplierName);
+                            pstmtInsert.setString(2, supplierAddress);
+                            pstmtInsert.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Supplier added successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while adding the supplier.");
+        }
+    }    
+
+    public void admin_modifyType() {
+        try (Connection conn = connect()) {
+            String query = "SELECT type_ID, type_Name FROM tbl_type";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Type to Modify", JOptionPane.PLAIN_MESSAGE);
+
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No type selected.");
+                        return;
+                    }
+
+                    int typeId = (int) table.getValueAt(selectedRow, 0);
+                    String currentTypeName = (String) table.getValueAt(selectedRow, 1);
+                    String newTypeName = JOptionPane.showInputDialog("Enter new name for type (current name: " + currentTypeName + "):");
+
+                    if (newTypeName != null && !newTypeName.trim().isEmpty()) {
+                        String updateQuery = "UPDATE tbl_type SET type_Name = ? WHERE type_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setString(1, newTypeName);
+                            updateStmt.setInt(2, typeId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Type modified successfully.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid type name.");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while modifying the type.");
+        }
+    }
+
+    public void admin_modifySize() {
+        try (Connection conn = connect()) {
+            String query = "SELECT size_ID, size_length FROM tbl_size";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Size to Modify", JOptionPane.PLAIN_MESSAGE);
     
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No size selected.");
+                        return;
+                    }
+    
+                    int sizeId = (int) table.getValueAt(selectedRow, 0);
+                    String currentSizeLength = (String) table.getValueAt(selectedRow, 1);
+                    String newSizeLength = JOptionPane.showInputDialog("Enter new length for size (current length: " + currentSizeLength + "):");
+    
+                    if (newSizeLength != null && !newSizeLength.trim().isEmpty()) {
+                        String updateQuery = "UPDATE tbl_size SET size_length = ? WHERE size_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setString(1, newSizeLength);
+                            updateStmt.setInt(2, sizeId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Size modified successfully.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid size length.");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while modifying the size.");
+        }
+    }
+    
+
+    public void admin_modifySupplier() {
+        try (Connection conn = connect()) {
+            String query = "SELECT supplier_ID, supplier_Name, supplier_Address FROM tbl_supplier";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Select a Supplier to Modify", JOptionPane.PLAIN_MESSAGE);
+    
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No supplier selected.");
+                        return;
+                    }
+    
+                    int supplierId = (int) table.getValueAt(selectedRow, 0);
+                    String currentSupplierName = (String) table.getValueAt(selectedRow, 1);
+                    String currentSupplierAddress = (String) table.getValueAt(selectedRow, 2);
+    
+                    String newSupplierName = JOptionPane.showInputDialog("Enter new name for supplier (current name: " + currentSupplierName + "):");
+                    String newSupplierAddress = JOptionPane.showInputDialog("Enter new address for supplier (current address: " + currentSupplierAddress + "):");
+    
+                    if ((newSupplierName != null && !newSupplierName.trim().isEmpty()) || (newSupplierAddress != null && !newSupplierAddress.trim().isEmpty())) {
+                        String updateQuery = "UPDATE tbl_supplier SET supplier_Name = ?, supplier_Address = ? WHERE supplier_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setString(1, newSupplierName);
+                            updateStmt.setString(2, newSupplierAddress);
+                            updateStmt.setInt(3, supplierId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Supplier modified successfully.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid supplier name or address.");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while modifying the supplier.");
+        }
+    }
+
+    private static DefaultTableModel buildTableModel(ResultSet rs) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
+
+        // Column names
+        Vector<String> columnNames = new Vector<>();
+        for (int column = 1; column <= columnCount; column++) {
+            columnNames.add(metaData.getColumnName(column));
+        }
+
+        // Data of the table
+        Vector<Vector<Object>> data = new Vector<>();
+        while (rs.next()) {
+            Vector<Object> row = new Vector<>();
+            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+                row.add(rs.getObject(columnIndex));
+            }
+            data.add(row);
+        }
+
+        return new DefaultTableModel(data, columnNames);
+    }
+
+    public void admin_seeInactiveOrders() {
+        // tablemodel all 'inactive' orders 
+
+        // allows user to select from table and
+
+        // make them active again
+    }
+
+    public void admin_seeInactiveCustomers() {
+        // tablemodel all 'inactive' customers 
+
+        // allows user to select from table and
+
+        // make them active again
+    }
+
+    public void admin_seeInactiveProducts() {
+        try (Connection conn = connect()) {
+            String query = "SELECT * FROM tbl_product WHERE product_ActiveStatus = 'inactive'";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    JTable table = new JTable(buildTableModel(rs));
+                    JOptionPane.showMessageDialog(null, new JScrollPane(table), "Inactive Products", JOptionPane.PLAIN_MESSAGE);
+
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow == -1) {
+                        JOptionPane.showMessageDialog(null, "No product selected.");
+                        return;
+                    }
+
+                    int productId = (int) table.getValueAt(selectedRow, 0);
+                    int option = JOptionPane.showConfirmDialog(null, "Are you sure you want to make this product active again?", "Confirm", JOptionPane.YES_NO_OPTION);
+                    if (option == JOptionPane.YES_OPTION) {
+                        String updateQuery = "UPDATE tbl_product SET product_ActiveStatus = 'active' WHERE product_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, productId);
+                            updateStmt.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Product made active again successfully.");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "An error occurred while retrieving inactive products.");
+        }
+    }
+
+    public void admin_addNewEmployee() {
+
+    }
+
+    public void admin_modifyEmployee() {
+
+    }
 
     // WORK IN PROGRESS / FUTURE ADDITIONS
 
@@ -1300,10 +1593,6 @@ public class Operations {
 
     /**
      * ABILITY TO DO THE FOLLOWING
-     * 
-     * -> ADD MORE TYPE / ID FOR ADMIN
-     * -> ADD MORE SIZE / ID FOR ADMIN
-     * -> ADD MORE SUPPLIER / ID FOR ADMIN
      * 
      *  -> ADD LOGGING / WHO AND WHEN DID A PERSON GO IN, maybe through text file...
      */

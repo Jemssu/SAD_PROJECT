@@ -32,6 +32,9 @@ public class Dashboard extends JFrame {
     private ManageInventory manageInventory;
     @SuppressWarnings("unused")
     private UpdateProducts updateProducts;
+    @SuppressWarnings("unused")
+    private AdminStuff adminStuff;
+    JButton adminButton;
 
     ButtonModel loginModel;
     
@@ -511,7 +514,27 @@ public class Dashboard extends JFrame {
         loginPanel.add(loginButton);
 
         loginButton.setBounds(325, 150, 170, 40);
+        loginButton.setBackground(Color.decode("#ff793f"));
         bottomLeftPanel.add(loginPanel);
+
+        // Change Listener
+        loginButton.getModel().addChangeListener(new ChangeListener() {
+            private boolean previousPressedState7 = false;
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                boolean currentPressedState7 = model.isPressed();
+
+                if (currentPressedState7 && !previousPressedState7) {
+                    loginButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Login - Is Pressed");
+                } else {
+                    loginButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    previousPressedState7 = currentPressedState7;
+                }
+            }
+        });
 
         // ACTION LISTENERS
         loginButton.addActionListener(new ActionListener() {
@@ -540,19 +563,22 @@ public class Dashboard extends JFrame {
 
                     if (accessLevel.equals("owner") || accessLevel.equals("admin")) {
                         // Access level is 'owner' or 'admin'
+                        showDashboard_Login_Welcome(parentPanel);
                         showDashboard_Admin();
                         hideDashboard_Login_Form();
-                        showDashboard_Login_Welcome(parentPanel);
+                        
                     } else if (accessLevel.equals("manager")) {
                         // Access level is 'manager'
+                        showDashboard_Login_Welcome(parentPanel);
                         showDashboard_Manager();
                         hideDashboard_Login_Form();
-                        showDashboard_Login_Welcome(parentPanel);
+
                     } else if (accessLevel.equals("salesperson") || accessLevel.equals("salesofficer") || accessLevel.equals("laborer") || accessLevel.equals("cashier")) {
                         // Access level is 'salesperson', 'salesofficer', 'laborer', or 'cashier'
+                        showDashboard_Login_Welcome(parentPanel);
                         showDashboard_Employee();
                         hideDashboard_Login_Form();
-                        showDashboard_Login_Welcome(parentPanel);
+                        
                     } else {
                         // Access level is none of the above
                         showDashboard_Nobody();
@@ -592,7 +618,27 @@ public class Dashboard extends JFrame {
         welcomePanel.add(logoutButton);
 
         logoutButton.setBounds(325, 150, 170, 40);
-        bottomLeftPanel.add(welcomePanel);
+        logoutButton.setBackground(Color.decode("#ff793f"));
+        
+
+        // Change listener
+        logoutButton.getModel().addChangeListener(new ChangeListener() {
+            private boolean previousPressedState7 = false;
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                boolean currentPressedState7 = model.isPressed();
+
+                if (currentPressedState7 && !previousPressedState7) {
+                    logoutButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Logout - Is Pressed");
+                } else {
+                    logoutButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    previousPressedState7 = currentPressedState7;
+                }
+            }
+        });
 
         // ACTION LISTENERS
         ButtonModel logoutModel = logoutButton.getModel();
@@ -608,6 +654,10 @@ public class Dashboard extends JFrame {
                 }
             }
         });
+
+        bottomLeftPanel.add(welcomePanel);
+        welcomePanel.revalidate();
+        welcomePanel.repaint();
     } // end of Dashboard_Login_Welcome
 
     public void hideDashboard_Welcome_Form() {
@@ -615,6 +665,12 @@ public class Dashboard extends JFrame {
         bottomLeftPanel.revalidate(); // Revalidate the panel to reflect changes
         bottomLeftPanel.repaint(); // Repaint the panel to update the UI
         bottomLeftPanel.validate(); // Validate the panel after removing components
+
+        // Disable the adminButton instead of removing it
+    if (adminButton != null) {
+        adminButton.setEnabled(false);
+        adminButton.setVisible(false); // Hide it instead of removing
+    }
     } // end of hideDashboard_Welcome_Form
 
     /**
@@ -654,6 +710,38 @@ public class Dashboard extends JFrame {
      */
     public void showDashboard_Admin() {
         enableAllDashButtons();
+
+        // Adding Admin Button
+        adminButton = new JButton("Admin Mode");
+        adminButton.setBounds(5, 275, 240, 40);
+        adminButton.setBackground(Color.decode("#ff793f"));
+        welcomePanel.add(adminButton);
+
+        // ADMIN MODEL with LISTENER
+        adminButton.getModel().addChangeListener(new ChangeListener() {
+            private boolean previousPressedState5 = false;
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                boolean currentPressedState5 = model.isPressed();
+
+                if (currentPressedState5 && !previousPressedState5) {
+                    adminButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Admin - Is Pressed");
+
+                    adminStuff = new AdminStuff(accessLevel, Dashboard.this);
+                    // Update the previousPressedState and Disables the Button
+                    previousPressedState5 = currentPressedState5;
+                    // Freeze the dashboardFrame until newOrder is closed
+                    hideMainDashboard();
+                } else {
+                    adminButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    previousPressedState5 = currentPressedState5;
+                }
+            }
+        });
+
     } // end of showDashboard_Admin
 
     /**
@@ -663,8 +751,6 @@ public class Dashboard extends JFrame {
      */
     public void showDashboard_Manager() {
         enableAllDashButtons();
-        button6.setEnabled(false);
-        button6.setBackground(Color.decode("#84817a"));
     } // end of show Dashboard_Manager
     
     /**
