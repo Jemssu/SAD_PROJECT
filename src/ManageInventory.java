@@ -111,7 +111,7 @@ public class ManageInventory extends JFrame {
 
         try {
             // Load Rubik-Bold font
-            Font rubikFont = loadFont("fonts/Rubik-Medium.ttf", 24f);
+            Font rubikFont = loadFont("fonts/Inter.ttc", 24f);
 
             // Set the Rubik-Bold font for the whole UI
             UIManager.put("Button.font", rubikFont);

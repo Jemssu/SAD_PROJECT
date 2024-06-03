@@ -1,3 +1,4 @@
+import java.awt.Component;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Connection;
@@ -15,11 +16,14 @@ import java.util.Vector;
 import java.util.stream.IntStream;
 
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Operations {
+
+    int PAGE_SIZE = 20;
 
     /**
      * Establishes Connection to the database
@@ -1928,16 +1932,269 @@ public class Operations {
         }
     }
     
+    //----------------------------------------------------------------
+    /**
+     * ORDER LIST PANEL METHODS
+     */
+    
+    /**
+     * Updates the transactions table with recent data
+     */
+    public void updateTransactionsTable(DefaultTableModel transaction_TableModel, int offset) {
+        String query = "SELECT transaction_ID, transaction_TotalPrice, transaction_TotalPaid, transaction_OrderStatus " +
+                    "FROM tbl_transaction " +
+                    "WHERE (transaction_OrderStatus = 'pending' OR transaction_ActiveStatus = 'active') " +
+                    "AND transaction_Date >= NOW() - INTERVAL 7 DAY " +
+                    "ORDER BY transaction_Date DESC " +
+                    "LIMIT " + PAGE_SIZE + " OFFSET " + offset + ";";
+
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+
+            transaction_TableModel.setRowCount(0);  // Clear the table
+
+            while (rs.next()) {
+                int transactionId = rs.getInt("transaction_ID");
+                double totalPrice = rs.getDouble("transaction_TotalPrice");
+                double totalPaid = rs.getDouble("transaction_TotalPaid");
+                String status = rs.getString("transaction_OrderStatus");
+
+                transaction_TableModel.addRow(new Object[]{transactionId, totalPrice, totalPaid, status});
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Updates the items table with data from the selected transaction
+     */
+    public void updateItemsTable(DefaultTableModel items_TableModel, int transactionId) {
+        String query = "SELECT i.product_ID, p.product_Name, i.item_Price, i.product_Quantity, i.item_SubTotal " +
+                    "FROM tbl_item i JOIN tbl_product p ON i.product_ID = p.product_ID " +
+                    "WHERE i.transaction_ID = ?;";
+
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, transactionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+
+                items_TableModel.setRowCount(0);  // Clear the table
+
+                while (rs.next()) {
+                    int productId = rs.getInt("product_ID");
+                    String productName = rs.getString("product_Name");
+                    double itemPrice = rs.getDouble("item_Price");
+                    int quantity = rs.getInt("product_Quantity");
+                    double subTotal = rs.getDouble("item_SubTotal");
+
+                    items_TableModel.addRow(new Object[]{productId, productName, itemPrice, quantity, subTotal});
+                }
+
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Checks if there are more rows available beyond the current page
+     */
+    public boolean hasMoreRows(int offset) {
+        String query = "SELECT COUNT(*) AS rowcount FROM tbl_transaction " +
+                        "WHERE (transaction_OrderStatus = 'pending' OR transaction_ActiveStatus = 'active') " +
+                        "AND transaction_Date >= NOW() - INTERVAL 7 DAY;";
+    
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+    
+            if (rs.next()) {
+                int rowCount = rs.getInt("rowcount");
+                return rowCount > offset;
+            }
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+
+    public void modifyTransaction() {
+        // IN-LINE WITH ORDER
+
+        // ask to change status or edit cart items
+    }
+
+    public void addPaymentToTransaction() {
+        // get the current paidAmount 
+
+        // subtract the value from paidAmount to orderTotal
+
+        // show amount and input
+    }
+
+    public void removeTransaction() {
+
+        // get transaction_ID using jpane and search in sql
+
+        // ask confirmation to delete the order
+
+        // check the items in the transactio table (and update the stock table)
+
+        // it adds back the items gathered / returns it
+
+        // make transaction_activestatus = inactive
+    }
+
+    public void seeFullDetailsTransaction() {
+        // Get Customer Info and Amount Needed Left to Pay
+    }
+
+    public void seeAllTransactions() {
+        // able to select : time period (enter range of date) , show all (even completed)
+    }
+
+    //----------------------------------------------------------------
+    /**
+     * ORDER LIST PANEL METHODS
+     */
+
+    public void updateCurrentTransactionTable() {
+
+    }
+
+    public void newTransaction() {
+        
+    }
+
+    public void addItemToTransaction(int ProductID) {
+
+    }
+
+    public boolean isThereEnoughProduct(int productID, int quantity) {
+        return true;
+    }
+
+    public void removeStock(int productID, int quantity) {
+
+    }
+
+    public void putBackStock(int productID, int quantity) {
+        
+    }
+
+    public void removeItemFromTransaction() {
+
+    }
+
+    public void cancelCurrentTransaction() {
+
+    }
+
+    // Method to fetch product information from the database based on product ID
+public void checkItemFromTransaction(int productID) {
+    try (Connection conn = connect()) {
+        // Check if the product exists
+        if (!doesProductExist(productID)) {
+            // Error: Product ID not found
+            JOptionPane.showMessageDialog(null, "Error: Item ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            // Clear GUI labels
+            itemNameLabel.setText("TYPE: ");
+            itemLengthLabel.setText("LENGTH: ");
+            itemPriceLabel.setText("PRICE: ");
+            itemLeftLabel.setText("STOCK: ");
+            return;
+        }
+
+        // Query to fetch product information
+        String query = "SELECT p.product_Name, p.product_Price, p.product_StockLeft, t.type_Name, s.size_length " +
+                    "FROM tbl_product p " +
+                    "INNER JOIN tbl_type t ON p.type_ID = t.type_ID " +
+                    "INNER JOIN tbl_size s ON p.size_ID = s.size_ID " +
+                    "WHERE p.product_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, productID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    // Product details
+                    String productName = rs.getString("product_Name");
+                    double productPrice = rs.getDouble("product_Price");
+                    int stockLeft = rs.getInt("product_StockLeft");
+                    String typeName = rs.getString("type_Name");
+                    String sizeLength = rs.getString("size_length");
+
+                    // Update GUI labels with product information
+                    itemNameLabel.setText("TYPE: " + typeName);
+                    itemLengthLabel.setText("LENGTH: " + sizeLength);
+                    itemPriceLabel.setText("PRICE: " + productPrice);
+                    itemLeftLabel.setText("STOCK: " + stockLeft);
+                }
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        // Error handling: Display appropriate error message in your GUI
+        JOptionPane.showMessageDialog(null, "Error fetching product information.", "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+    
+    // Method to see the product list
+    public void seeProductList() {
+        String query = "SELECT product_ID, product_Name, product_Price, product_StockLeft FROM tbl_product WHERE product_ActiveStatus = 'active'";
+
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+
+            // Prepare data for the JTable
+            DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Name", "Price", "Stock Left"}, 0);
+
+            while (rs.next()) {
+                int id = rs.getInt("product_ID");
+                String name = rs.getString("product_Name");
+                double price = rs.getDouble("product_Price");
+                int stockLeft = rs.getInt("product_StockLeft");
+
+                model.addRow(new Object[]{id, name, price, stockLeft});
+            }
+
+            // Create a JTable with the model
+            JTable table = new JTable(model);
+
+            // Use ColumnsAutoSizer to adjust column widths
+            ColumnsAutoSizer.sizeColumnsToFit(table);
+
+            // Display the table in a JOptionPane
+            JOptionPane.showMessageDialog(null, new JScrollPane(table), "All Available Products", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error fetching product list.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void updateTransactionTotal() {
+
+    }
+
+
+
+
+
+
+    
 
     // WORK IN PROGRESS / FUTURE ADDITIONS
-
     /**
-     *  Might do some tweaks n stuffs sa ADDING A PRODUCT na button
-     */
-
-    /**
-     * ABILITY TO DO THE FOLLOWING
-     * 
      *  -> ADD LOGGING / WHO AND WHEN DID A PERSON GO IN, maybe through text file...
+     *  -> rename tables
      */
 }
+

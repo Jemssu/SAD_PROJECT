@@ -34,6 +34,14 @@ public class NewOrder extends JFrame {
     private Dashboard dashboard;
     JPanel rightPanel, leftPanel;
     JButton button1, button2, button3, button4, button5, button6;
+    String transactionID = "--- ---";
+    String currentTotalAmount = "--- ---";
+    JButton checkButton, searchProductButton, addButton;
+    JLabel itemPriceLabel, itemLengthLabel, itemNameLabel, itemLeftLabel, orderTotalLabel;
+    JTextField enterIdTextField;
+    String checkedStockLeft, checkedType, checkedLength, checkedPrice;
+
+    Operations ops = new Operations();
 
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
@@ -115,7 +123,7 @@ public class NewOrder extends JFrame {
 
         try {
             // Load Rubik-Bold font
-            Font rubikFont = loadFont("fonts/Rubik-Medium.ttf", 24f);
+            Font rubikFont = loadFont("fonts/Inter.ttc", 24f);
 
             // Set the Rubik-Bold font for the whole UI
             UIManager.put("Button.font", rubikFont);
@@ -168,19 +176,19 @@ public class NewOrder extends JFrame {
         newOrderFrame.add(leftPanel);
 
         // Create buttons with icons aligned on top and padding
-        button1 = new ImageButton(resizeIcon("icons/no_new.png", 100, 100), 50);
-        button2 = new ImageButton(resizeIcon("icons/no_remove.png", 100, 100), 50);
-        button3 = new ImageButton(resizeIcon("icons/no_cancel.png", 100, 100), 50);
-        button4 = new ImageButton(resizeIcon("icons/no_check.png", 100, 100), 50);
-        button5 = new ImageButton(resizeIcon("icons/no_confirm.png", 100, 100), 50);
+        button1 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
+        button2 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
+        button3 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
+        button4 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
+        button5 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
         button6 = new ImageButton(resizeIcon("icons/back_exit.png", 100, 100), 50);
 
         // Set Text of Buttons
         button1.setText("New Order");
-        button2.setText("Remove Item");
-        button3.setText("Cancel Order");
-        button4.setText("Check Details");
-        button5.setText("Confirm Order");
+        button2.setText("Cancel Order");
+        button3.setText("Confirm Order");
+        button4.setText("Edit Item");
+        button5.setText("W.I.P.");
         button6.setText("Exit");
 
         // Adjust text height for buttons
@@ -283,6 +291,13 @@ public class NewOrder extends JFrame {
             }
         });
 
+        button5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                
+            }
+        });
+
         // BUTTON 6 MODEL with CHANGE LISTENER (EXIT)
         button6.getModel().addChangeListener(new ChangeListener() {
             @Override
@@ -335,56 +350,127 @@ public class NewOrder extends JFrame {
 
         newOrderFrame.add(rightPanel);
 
-        JLabel transaction_label = new JLabel("Transactions");
-        transaction_label.setBounds(5, 5, 250, 35);
+        JLabel transaction_label = new JLabel("Current Transaction: " + transactionID );
+        transaction_label.setBounds(5, 5, 500, 35);
         rightPanel.add(transaction_label);
 
         // Create a table model for the first table
         DefaultTableModel transaction_TableModel = new DefaultTableModel();
         JTable transaction_Table = new JTable(transaction_TableModel);
+
         JScrollPane transaction_TableScroll = new JScrollPane(transaction_Table);
         transaction_TableScroll.setBounds(5, 40, 800, 290);
         rightPanel.add(transaction_TableScroll);
 
-        transaction_TableModel.addColumn("TRANSACTION ID");
-        transaction_TableModel.addColumn("TOTAL AMOUNT");
-        transaction_TableModel.addColumn("AMOUNT PAID");
-        transaction_TableModel.addColumn("STATUS");
+        transaction_TableModel.addColumn("ID");
+        transaction_TableModel.addColumn("NAME");
+        transaction_TableModel.addColumn("QUANTITY");
+        transaction_TableModel.addColumn("PRICE");
+        transaction_TableModel.addColumn("SUBTOTAL");
 
-        // Add "ENTER ID" JLabel
-        JLabel enterIdLabel = new JLabel("ENTER ID");
-        enterIdLabel.setBounds(105, 340, 250, 35);
+        JLabel enterIdLabel = new JLabel("Product ID:");
+        enterIdLabel.setBounds(5, 340, 245, 50);
         rightPanel.add(enterIdLabel);
 
-        // Add JTextField
-        JTextField enterIdTextField = new JTextField();
-        enterIdTextField.setBounds(105, 380, 250, 30);
+        enterIdTextField = new JTextField();
+        enterIdTextField.setBounds(5, 400, 245, 50);
         rightPanel.add(enterIdTextField);
 
-        // Add "Enter" JButton
-        JButton enterButton = new JButton("Enter");
-        enterButton.setBounds(105, 420, 120, 30);
-        rightPanel.add(enterButton);
+        searchProductButton = new JButton("Product List");
+        searchProductButton.setBounds(5, 460, 245, 50);
+        searchProductButton.setBackground(Color.decode("#ff793f"));
+        rightPanel.add(searchProductButton);
 
-        // Add "more2" JLabel
-        JLabel itemNameLabel = new JLabel("TYPE HERE");
-        itemNameLabel.setBounds(405, 340, 250, 35);
+        searchProductButton.getModel().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                if (model.isPressed()) {
+                    searchProductButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Product List - Is Pressed");
+                } else {
+                    searchProductButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                }
+            }
+        });
+
+        searchProductButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.seeProductList();
+            }
+        });   
+
+        addButton = new JButton("Add");
+        addButton.setBounds(130, 520, 120, 50);
+        addButton.setBackground(Color.decode("#ff793f"));
+        rightPanel.add(addButton);
+        
+        addButton.getModel().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                if (model.isPressed()) {
+                    addButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Add Button - Is Pressed");
+                } else {
+                    addButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                }
+            }
+        });
+
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.addItemToTransaction(Integer.parseInt(enterIdTextField.toString()));
+                ops.updateCurrentTransactionTable();
+            }
+        });
+
+        checkButton = new JButton("Check");
+        checkButton.setBounds(5, 520, 120, 50);
+        checkButton.setBackground(Color.decode("#ff793f"));
+        rightPanel.add(checkButton);
+
+        checkButton.getModel().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ButtonModel model = (ButtonModel) e.getSource();
+                if (model.isPressed()) {
+                    checkButton.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    System.out.println("Check Button - Is Pressed");
+                } else {
+                    checkButton.setBackground(Color.decode("#ff793f")); // Change color back when released
+                }
+            }
+        });
+
+        checkButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.checkItemFromTransaction(Integer.parseInt(enterIdTextField.getText()));
+            }
+        });
+
+        orderTotalLabel = new JLabel("ORDER TOTAL : " + currentTotalAmount);
+        orderTotalLabel.setBounds(5, 600, 500, 35);
+        rightPanel.add(orderTotalLabel);
+
+        itemNameLabel = new JLabel("TYPE: " + checkedType);
+        itemNameLabel.setBounds(270, 340, 250, 50);
         rightPanel.add(itemNameLabel);
 
-        // Add "more3" JLabel
-        JLabel itemLengthLabel = new JLabel("LENGTH HERE");
-        itemLengthLabel.setBounds(405, 380, 250, 35);
+        itemLengthLabel = new JLabel("LENGTH: " + checkedLength);
+        itemLengthLabel.setBounds(270, 400, 250, 50);
         rightPanel.add(itemLengthLabel);
 
-        // Add "more1" JLabel
-        JLabel itemPriceLabel = new JLabel("PRICE HERE");
-        itemPriceLabel.setBounds(405, 420, 250, 35);
+        itemPriceLabel = new JLabel("PRICE: " + checkedPrice);
+        itemPriceLabel.setBounds(270, 460, 250, 50);
         rightPanel.add(itemPriceLabel);
 
-        
-
-
-
+        itemLeftLabel = new JLabel("STOCK: " + checkedStockLeft);
+        itemLeftLabel.setBounds(270, 520, 250, 50);
+        rightPanel.add(itemLeftLabel);
     } // end of New Order
 
     /**

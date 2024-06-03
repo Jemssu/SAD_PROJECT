@@ -33,6 +33,12 @@ public class OrderList extends JFrame {
     private Dashboard dashboard;
     JPanel rightPanel, leftPanel;
     JButton button1, button2, button3, button4, button5, button6;
+    JTable transaction_Table;
+    DefaultTableModel transaction_TableModel, items_TableModel;
+    JButton transactionNextButton, transactionPrevButton;
+
+    Operations ops = new Operations();
+    private int currentPage = 0;
 
     /**
      * This method is responsible for loading the image for the Icons in the Buttons Panel.
@@ -167,19 +173,19 @@ public class OrderList extends JFrame {
         orderListFrame.add(leftPanel);
 
         // Create buttons with icons aligned on top and padding
-        button1 = new ImageButton(resizeIcon("icons/ol_change.png", 100, 100), 50);
-        button2 = new ImageButton(resizeIcon("icons/ol_payment.png", 100, 100), 50);
-        button3 = new ImageButton(resizeIcon("icons/ol_status.png", 100, 100), 50);
-        button4 = new ImageButton(resizeIcon("icons/ol_delete.png", 100, 100), 50);
-        button5 = new ImageButton(resizeIcon("icons/ol_details.png", 100, 100), 50);
+        button1 = new ImageButton(resizeIcon("icons/ol_payment.png", 100, 100), 50);
+        button2 = new ImageButton(resizeIcon("icons/ol_change.png", 100, 100), 50);
+        button3 = new ImageButton(resizeIcon("icons/ol_delete.png", 100, 100), 50);
+        button4 = new ImageButton(resizeIcon("icons/ol_details.png", 100, 100), 50);
+        button5 = new ImageButton(resizeIcon("icons/ol_filter.png", 100, 100), 50);
         button6 = new ImageButton(resizeIcon("icons/back_exit.png", 100, 100), 50);
 
         // Set Text of Buttons
-        button1.setText("Modify Order");
-        button2.setText("Add Payment");
-        button3.setText("Change Status");
-        button4.setText("Delete Order");
-        button5.setText("Full Details");
+        button1.setText("Add Payment");
+        button2.setText("Modify Order");
+        button3.setText("Remove Order");
+        button4.setText("Transaction Details");
+        button5.setText("More Filters");
         button6.setText("Exit");
 
         // Adjust text height for buttons
@@ -338,13 +344,10 @@ public class OrderList extends JFrame {
         transaction_label.setBounds(5, 5, 250, 35);
         rightPanel.add(transaction_label);
 
-        JButton transactionFilterButton = new JButton("Toggle");
-        transactionFilterButton.setBounds(680, 5, 120, 30);
-        rightPanel.add(transactionFilterButton);
-
         // Create a table model for the first table
-        DefaultTableModel transaction_TableModel = new DefaultTableModel();
-        JTable transaction_Table = new JTable(transaction_TableModel);
+        transaction_TableModel = new DefaultTableModel();
+        transaction_Table = new JTable(transaction_TableModel);
+        transaction_Table.setDefaultEditor(Object.class, null);
         JScrollPane transaction_TableScroll = new JScrollPane(transaction_Table);
         transaction_TableScroll.setBounds(5, 40, 800, 290);
         rightPanel.add(transaction_TableScroll);
@@ -359,13 +362,10 @@ public class OrderList extends JFrame {
         itemInventory_label.setBounds(5, 335, 250, 35);
         rightPanel.add(itemInventory_label);
 
-        JButton itemFilterButton = new JButton("Toggle");
-        itemFilterButton.setBounds(680, 335, 120, 30);
-        rightPanel.add(itemFilterButton);
-
         // Create a table model for the second table
-        DefaultTableModel items_TableModel = new DefaultTableModel();
+        items_TableModel = new DefaultTableModel();
         JTable items_Table = new JTable(items_TableModel);
+        items_Table.setDefaultEditor(Object.class, null);
         JScrollPane items_TableScroll = new JScrollPane(items_Table);
         items_TableScroll.setBounds(5, 370, 800, 290);
         rightPanel.add(items_TableScroll);
@@ -375,7 +375,78 @@ public class OrderList extends JFrame {
         items_TableModel.addColumn("PRICE");
         items_TableModel.addColumn("QUANTITY");
         items_TableModel.addColumn("SUB-TOTAL");
+
+        // Add row selection listener to transaction table
+        transaction_Table.getSelectionModel().addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting() && transaction_Table.getSelectedRow() != -1) {
+                int selectedRow = transaction_Table.getSelectedRow();
+                int transactionId = (int) transaction_TableModel.getValueAt(selectedRow, 0);
+                ops.updateItemsTable(items_TableModel, transactionId);
+            }
+        });
+
+        transactionNextButton = new JButton("Next");
+        transactionNextButton.setBounds(680, 5, 120, 30);
+        rightPanel.add(transactionNextButton);
+
+        transactionPrevButton = new JButton("Prev");
+        transactionPrevButton.setBounds(550, 5, 120, 30);
+        rightPanel.add(transactionPrevButton);
+
+        JButton transactionClearButton = new JButton("Clear");
+        transactionClearButton.setBounds(680, 335, 120, 30);
+        rightPanel.add(transactionClearButton);
+
+        // Add action listeners for pagination and clearing selection
+        transactionNextButton.addActionListener(e -> nextPage());
+        transactionPrevButton.addActionListener(e -> previousPage());
+        transactionClearButton.addActionListener(e -> clearSelectedRow());
+
+        updateTransactionsTable();
+
     } // end of New Order
+
+    public void nextPage() {
+        int offset = (currentPage + 1) * ops.PAGE_SIZE;
+        System.out.println("Next page offset: " + offset); // Verify the calculated offset
+        if (ops.hasMoreRows(offset)) {
+            System.out.println("Next page: More rows available, proceeding to next page.");
+            currentPage++;
+            updateTransactionsTable();
+        } else {
+            System.out.println("Next page: No more rows available.");
+            JOptionPane.showMessageDialog(null, "No more pages to display.");
+        }
+    }
+
+    public void previousPage() {
+        if (currentPage > 0) {
+            System.out.println("Previous page: Going back to previous page.");
+            currentPage--;
+        } else {
+            System.out.println("Previous page: Already on the first page.");
+        }
+        updateTransactionsTable();
+    }
+    
+    public void clearSelectedRow() {
+        System.out.println("Clearing selected row.");
+        transaction_Table.clearSelection();
+        items_TableModel.setRowCount(0);
+    }
+
+    public void updateTransactionsTable() {
+        int offset = currentPage * ops.PAGE_SIZE;
+        System.out.println("Current page: " + currentPage);
+        System.out.println("Update table offset: " + offset); // Verify the offset for updating transactions table
+        ops.updateTransactionsTable(transaction_TableModel, offset);
+    
+        // Enable or disable pagination buttons
+        boolean hasNextPage = ops.hasMoreRows(offset + ops.PAGE_SIZE);
+        System.out.println("Has next page: " + hasNextPage);
+        transactionNextButton.setEnabled(hasNextPage);
+        transactionPrevButton.setEnabled(currentPage > 0);
+    }
 
     /**
      * This method loads custom fonts (ttf files etc.) from the Fonts Folder

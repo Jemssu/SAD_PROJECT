@@ -182,7 +182,7 @@ public class Dashboard extends JFrame {
 
         try {
             // Load Rubik-Bold font
-            Font rubikFont = loadFont("fonts/Rubik-Medium.ttf", 24f);
+            Font rubikFont = loadFont("fonts/Inter.ttc", 24f);
             // Set the Rubik-Bold font for the whole UI
             UIManager.put("Button.font", rubikFont);
             UIManager.put("Label.font", rubikFont);
@@ -194,7 +194,7 @@ public class Dashboard extends JFrame {
 
         // Set font for JOptionPane message
         try {
-            Font rubikFont = loadFont("fonts/Rubik-Medium.ttf", 16f);
+            Font rubikFont = loadFont("fonts/Inter.ttc", 16f);
             UIManager.put("OptionPane.messageFont", rubikFont);
             UIManager.put("OptionPane.buttonFont", rubikFont);
         } catch (IOException | FontFormatException e) {
