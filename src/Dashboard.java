@@ -45,7 +45,7 @@ public class Dashboard extends JFrame {
      * Method to run XAMPP.
      */
     private static void runXAMPP() throws IOException {
-        @SuppressWarnings("unused")
+        @SuppressWarnings({ "unused", "deprecation" })
         Process runXAMPP = Runtime.getRuntime().exec("D://xampp//xampp_start.exe");
         System.out.println("XAMPP started.");
     }
@@ -54,7 +54,7 @@ public class Dashboard extends JFrame {
      * Method to run MySQL.
      */
     private static void runSQL() throws IOException {
-        @SuppressWarnings("unused")
+        @SuppressWarnings({ "unused", "deprecation" })
         Process runSQL = Runtime.getRuntime().exec("D://xampp//mysql//bin//mysqld.exe");
         System.out.println("MySQL started.");
     }
@@ -299,7 +299,7 @@ public class Dashboard extends JFrame {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 1 - Is Pressed");
 
-                    newOrder = new NewOrder(accessLevel, Dashboard.this);
+                    newOrder = new NewOrder(accessLevel, Dashboard.this, ops.getLoginID(username, password));
                     // Update the previousPressedState and Disables the Button
                     previousPressedState = currentPressedState;
                     // Freeze the dashboardFrame until newOrder is closed

@@ -2065,84 +2065,276 @@ public class Operations {
      * ORDER LIST PANEL METHODS
      */
 
-    public void updateCurrentTransactionTable() {
+    public void newTransaction(JLabel transaction_label, int employee_ID) {
+        try (Connection conn = connect()) {
+            // Insert a new transaction into the database
+            String insertQuery = "INSERT INTO tbl_transaction (employee_ID, transaction_Date, transaction_TotalPrice, transaction_TotalPaid, transaction_OrderStatus, transaction_ActiveStatus) VALUES (?, CURRENT_TIMESTAMP, 0.00, 0.00, 'pending', 'active')";
+            try (PreparedStatement pstmt = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS)) {
+                // Set parameters
+                pstmt.setInt(1, employee_ID);
+                
+                // Execute the insert statement
+                int rowsAffected = pstmt.executeUpdate();
+                
+                // Check if the insertion was successful
+                if (rowsAffected > 0) {
+                    // Get the generated transaction ID
+                    try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            int transactionID = rs.getInt(1);
+                            
+                            // Print the transactionID to verify if it's being set correctly
+                            System.out.println("New Transaction ID: " + transactionID);
 
+                            // Update the transaction label with the new transaction ID
+                            transaction_label.setText("Current Transaction: " + transactionID);
+                            
+                            // Optionally, you can return the transaction ID or perform other actions
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+        }
     }
+    
 
-    public void newTransaction() {
-        
+    public void addItemToTransaction(int productID, DefaultTableModel transactionTableModel) {
+        System.out.println("Received product ID in addItemToTransaction: " + productID);
+        try (Connection conn = connect()) {
+            // Check if the product exists
+            if (!doesProductExist(productID)) {
+                JOptionPane.showMessageDialog(null, "Error: Product ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Fetch product details including price
+            String query = "SELECT product_Name, product_Price FROM tbl_product WHERE product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        String productName = rs.getString("product_Name");
+                        double productPrice = rs.getDouble("product_Price");
+                        
+                        // Prompt the user for the quantity to add
+                        String quantityString = JOptionPane.showInputDialog(null, "Enter quantity to add:", "Add Item", JOptionPane.PLAIN_MESSAGE);
+                        if (quantityString == null || quantityString.isEmpty()) {
+                            // User canceled or entered an empty string
+                            return;
+                        }
+                        
+                        // Convert the input to integer
+                        int quantity;
+                        try {
+                            quantity = Integer.parseInt(quantityString);
+                            if (quantity <= 0) {
+                                throw new NumberFormatException();
+                            }
+                        } catch (NumberFormatException e) {
+                            JOptionPane.showMessageDialog(null, "Error: Invalid quantity.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                        
+                        // Check if there is enough product
+                        if (!isThereEnoughProduct(productID, quantity)) {
+                            JOptionPane.showMessageDialog(null, "Error: Not enough product in stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                        
+                        // Add the item to the transaction table
+                        double subtotal = productPrice * quantity;
+                        transactionTableModel.addRow(new Object[]{productID, productName, quantity, productPrice, subtotal});
+                        
+                        // Update the stock
+                        removeStock(productID, quantity);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-
-    public void addItemToTransaction(int ProductID) {
-
-    }
+    
+    
 
     public boolean isThereEnoughProduct(int productID, int quantity) {
-        return true;
+        try (Connection conn = connect()) {
+            // Check if there is enough stock for the given product
+            String query = "SELECT product_StockLeft FROM tbl_product WHERE product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int stockLeft = rs.getInt("product_StockLeft");
+                        return stockLeft >= quantity;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+        }
+        return false; // Return false if there was an error or if the product was not found
     }
 
     public void removeStock(int productID, int quantity) {
-
-    }
-
-    public void putBackStock(int productID, int quantity) {
-        
-    }
-
-    public void removeItemFromTransaction() {
-
-    }
-
-    public void cancelCurrentTransaction() {
-
-    }
-
-    // Method to fetch product information from the database based on product ID
-public void checkItemFromTransaction(int productID) {
-    try (Connection conn = connect()) {
-        // Check if the product exists
-        if (!doesProductExist(productID)) {
-            // Error: Product ID not found
-            JOptionPane.showMessageDialog(null, "Error: Item ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
-            // Clear GUI labels
-            itemNameLabel.setText("TYPE: ");
-            itemLengthLabel.setText("LENGTH: ");
-            itemPriceLabel.setText("PRICE: ");
-            itemLeftLabel.setText("STOCK: ");
-            return;
-        }
-
-        // Query to fetch product information
-        String query = "SELECT p.product_Name, p.product_Price, p.product_StockLeft, t.type_Name, s.size_length " +
-                    "FROM tbl_product p " +
-                    "INNER JOIN tbl_type t ON p.type_ID = t.type_ID " +
-                    "INNER JOIN tbl_size s ON p.size_ID = s.size_ID " +
-                    "WHERE p.product_ID = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setInt(1, productID);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    // Product details
-                    String productName = rs.getString("product_Name");
-                    double productPrice = rs.getDouble("product_Price");
-                    int stockLeft = rs.getInt("product_StockLeft");
-                    String typeName = rs.getString("type_Name");
-                    String sizeLength = rs.getString("size_length");
-
-                    // Update GUI labels with product information
-                    itemNameLabel.setText("TYPE: " + typeName);
-                    itemLengthLabel.setText("LENGTH: " + sizeLength);
-                    itemPriceLabel.setText("PRICE: " + productPrice);
-                    itemLeftLabel.setText("STOCK: " + stockLeft);
+        try (Connection conn = connect()) {
+            // Fetch the current stock left
+            String query = "SELECT product_StockLeft FROM tbl_product WHERE product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int currentStock = rs.getInt("product_StockLeft");
+                        
+                        // Calculate the new stock after removing the specified quantity
+                        int newStock = currentStock - quantity;
+                        if (newStock < 0) {
+                            newStock = 0; // Ensure the stock doesn't go negative
+                        }
+                        
+                        // Update the stock in the database
+                        String updateQuery = "UPDATE tbl_product SET product_StockLeft = ? WHERE product_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, newStock);
+                            updateStmt.setInt(2, productID);
+                            updateStmt.executeUpdate();
+                        }
+                    }
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
-        // Error handling: Display appropriate error message in your GUI
-        JOptionPane.showMessageDialog(null, "Error fetching product information.", "Error", JOptionPane.ERROR_MESSAGE);
     }
-}
+
+    public void cancelCurrentTransaction(String transactionID, JLabel transactionLabel) {
+        System.out.println("Transaction ID Received: " + transactionID);
+        try (Connection conn = connect()) {
+            // Set the current transaction's active status to 'cancelled'
+            String cancelQuery = "UPDATE tbl_transaction SET transaction_ActiveStatus = 'cancelled' WHERE transaction_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(cancelQuery)) {
+                pstmt.setInt(1, Integer.parseInt(transactionID)); // Assuming transactionID is available
+                pstmt.executeUpdate();
+            }
+    
+            // Clear the transaction label
+            transactionLabel.setText("");
+    
+            // Put back all the items added in the current transaction using putBackStock
+            DefaultTableModel transactionTableModel = new DefaultTableModel();
+            updateCurrentTransactionTable(Integer.parseInt(transactionID), transactionTableModel);
+            for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
+                int productID = (int) transactionTableModel.getValueAt(row, 0);
+                int quantity = (int) transactionTableModel.getValueAt(row, 2);
+                putBackStock(productID, quantity);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+        }
+    }
+
+    public void updateCurrentTransactionTable(int currentTransactionID, DefaultTableModel transactionTableModel) {
+        System.out.println("Transaction ID Received: " + currentTransactionID );
+        try (Connection conn = connect()) {
+            String query = "SELECT i.product_ID, p.product_Name, i.product_Quantity, i.item_Price, i.item_SubTotal " +
+                        "FROM tbl_item i " +
+                        "INNER JOIN tbl_product p ON i.product_ID = p.product_ID " +
+                        "WHERE i.transaction_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, currentTransactionID); // Assuming currentTransactionID is available
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    // Clear the table before updating it
+                    transactionTableModel.setRowCount(0);
+                    
+                    // Iterate through the results and update the table
+                    while (rs.next()) {
+                        int productID = rs.getInt("product_ID");
+                        String productName = rs.getString("product_Name");
+                        int quantity = rs.getInt("product_Quantity");
+                        double price = rs.getDouble("item_Price");
+                        double subtotal = rs.getDouble("item_SubTotal");
+                        
+                        // Add a row to the table
+                        transactionTableModel.addRow(new Object[]{productID, productName, quantity, price, subtotal});
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+        }
+    }
+    
+    
+    public void putBackStock(int productID, int quantity) {
+        try (Connection conn = connect()) {
+            // Update the stock quantity for the given product
+            String putBackQuery = "UPDATE tbl_product SET product_Stock = product_Stock + ? WHERE product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(putBackQuery)) {
+                pstmt.setInt(1, quantity);
+                pstmt.setInt(2, productID);
+                pstmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+        }
+    }
+    
+
+   // Method to fetch product information from the database based on product ID
+    public void checkItemFromTransaction(int productID, JLabel itemNameLabel, JLabel itemLengthLabel, JLabel itemPriceLabel, JLabel itemLeftLabel) {
+        System.out.println("Received product ID: " + productID);
+        try (Connection conn = connect()) {
+            // Check if the product exists
+            if (!doesProductExist(productID)) {
+                // Error: Product ID not found
+                JOptionPane.showMessageDialog(null, "Error: Item ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                // Clear GUI labels
+                itemNameLabel.setText("TYPE: ");
+                itemLengthLabel.setText("LENGTH: ");
+                itemPriceLabel.setText("PRICE: ");
+                itemLeftLabel.setText("STOCK: ");
+                return;
+            }
+
+            // Query to fetch product information
+            String query = "SELECT p.product_Name, p.product_Price, p.product_StockLeft, t.type_Name, s.size_length " +
+                        "FROM tbl_product p " +
+                        "INNER JOIN tbl_type t ON p.type_ID = t.type_ID " +
+                        "INNER JOIN tbl_size s ON p.size_ID = s.size_ID " +
+                        "WHERE p.product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        // Product details
+                        double productPrice = rs.getDouble("product_Price");
+                        int stockLeft = rs.getInt("product_StockLeft");
+                        String typeName = rs.getString("type_Name");
+                        String sizeLength = rs.getString("size_length");
+
+                        // Update GUI labels with product information
+                        itemNameLabel.setText("TYPE: " + typeName);
+                        itemLengthLabel.setText("LENGTH: " + sizeLength);
+                        itemPriceLabel.setText("PRICE: " + productPrice);
+                        itemLeftLabel.setText("STOCK: " + stockLeft);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Error handling: Display appropriate error message in your GUI
+            JOptionPane.showMessageDialog(null, "Error fetching product information.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
     
     // Method to see the product list
@@ -2180,9 +2372,34 @@ public void checkItemFromTransaction(int productID) {
         }
     }
 
-    public void updateTransactionTotal() {
-
+    public double getSubtotalForProduct(int productID, DefaultTableModel transactionTableModel) {
+        double subtotal = 0.0;
+        for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
+            int id = (int) transactionTableModel.getValueAt(row, 0);
+            if (id == productID) {
+                int quantity = (int) transactionTableModel.getValueAt(row, 2); // Assuming quantity is in the third column
+                double price = (double) transactionTableModel.getValueAt(row, 3); // Assuming price is in the fourth column
+                subtotal = quantity * price;
+                break; // Break out of the loop once the subtotal is calculated for the specified product ID
+            }
+        }
+        return subtotal;
     }
+    
+    public void updateTransactionTotal(DefaultTableModel transactionTableModel, int currentTotalAmount, JLabel orderTotalLabel) {
+        double total = currentTotalAmount; // Initialize total with the currentTotalAmount
+        for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
+            double subtotal = (double) transactionTableModel.getValueAt(row, 4);
+            total += subtotal;
+        }
+        System.out.println("New Total: " + total); // Print the new total
+        orderTotalLabel.setText("ORDER TOTAL: " + total);
+    }
+    
+    
+    
+    
+    
 
 
 

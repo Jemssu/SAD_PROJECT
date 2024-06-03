@@ -35,11 +35,12 @@ public class NewOrder extends JFrame {
     JPanel rightPanel, leftPanel;
     JButton button1, button2, button3, button4, button5, button6;
     String transactionID = "--- ---";
-    String currentTotalAmount = "--- ---";
+    int currentTotalAmount = 0;
     JButton checkButton, searchProductButton, addButton;
+    JLabel transaction_label;
     JLabel itemPriceLabel, itemLengthLabel, itemNameLabel, itemLeftLabel, orderTotalLabel;
     JTextField enterIdTextField;
-    String checkedStockLeft, checkedType, checkedLength, checkedPrice;
+    String checkedStockLeft = "", checkedType = "", checkedLength = "", checkedPrice = "";
 
     Operations ops = new Operations();
 
@@ -112,7 +113,7 @@ public class NewOrder extends JFrame {
         button.setMargin(new Insets(paddingTop, 0, 0, 0)); // Only Top since it is already centered.
     }
 
-    public NewOrder(String access_level, Dashboard dashboard) {
+    public NewOrder(String access_level, Dashboard dashboard, int employee_ID) {
         this.dashboard = dashboard;
 
         JFrame newOrderFrame = new JFrame("New Order Panel");
@@ -228,12 +229,22 @@ public class NewOrder extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 1 - Is Pressed");
+                    System.out.println("New Order - Is Pressed");
                 } else {
-                    button1.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
+
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Call the newTransaction method from the Operations class
+                ops.newTransaction(transaction_label, employee_ID);
+                yesTransaction();
+            }
+        });
+        
         
         // BUTTON 2 MODEL with LISTENER
         button2.getModel().addChangeListener(new ChangeListener() {
@@ -242,10 +253,19 @@ public class NewOrder extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 2 - Is Pressed");
+                    System.out.println("Cancel Order - Is Pressed");
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println(transactionID);
+
+                ops.cancelCurrentTransaction(transactionID, transaction_label);
             }
         });
 
@@ -263,6 +283,13 @@ public class NewOrder extends JFrame {
             }
         });
 
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                
+            }
+        });
+
         // BUTTON 4 MODEL with LISTENER
         button4.getModel().addChangeListener(new ChangeListener() {
             @Override
@@ -274,6 +301,13 @@ public class NewOrder extends JFrame {
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                
             }
         });
 
@@ -350,7 +384,7 @@ public class NewOrder extends JFrame {
 
         newOrderFrame.add(rightPanel);
 
-        JLabel transaction_label = new JLabel("Current Transaction: " + transactionID );
+        transaction_label = new JLabel("Current Transaction: " + transactionID );
         transaction_label.setBounds(5, 5, 500, 35);
         rightPanel.add(transaction_label);
 
@@ -422,10 +456,32 @@ public class NewOrder extends JFrame {
         addButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ops.addItemToTransaction(Integer.parseInt(enterIdTextField.toString()));
-                ops.updateCurrentTransactionTable();
+                String inputText = enterIdTextField.getText().trim(); // Trim to remove leading and trailing whitespaces
+                if (inputText.isEmpty()) {
+                    // Handle empty input
+                    JOptionPane.showMessageDialog(null, "Error: Product ID cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                try {
+                    int productID = Integer.parseInt(inputText);
+                    // Call the checkItemFromTransaction method from the Operations class
+                    ops.checkItemFromTransaction(productID, itemNameLabel, itemLengthLabel, itemPriceLabel, itemLeftLabel);
+                    ops.addItemToTransaction(productID, transaction_TableModel);
+                    //ops.updateCurrentTransactionTable(Integer.parseInt(transactionID), transaction_TableModel);
+
+                    
+                    // Update the order total label
+                    System.out.println("Before updating transaction total: Current Total Amount = " + currentTotalAmount);
+                    ops.updateTransactionTotal(transaction_TableModel, currentTotalAmount, orderTotalLabel);
+                    
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(null, "Error: Invalid product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
+        
+        
+        
 
         checkButton = new JButton("Check");
         checkButton.setBounds(5, 520, 120, 50);
@@ -448,9 +504,21 @@ public class NewOrder extends JFrame {
         checkButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ops.checkItemFromTransaction(Integer.parseInt(enterIdTextField.getText()));
+                
+                int productID;
+                try {
+                    productID = Integer.parseInt(enterIdTextField.getText());
+                } catch (NumberFormatException ex) {
+                    // Handle the case where the text is not a valid integer
+                    JOptionPane.showMessageDialog(null, "Error: Invalid product ID. checkButton", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                System.out.println("Received product ID 1: " + productID);
+                // Call the checkItemFromTransaction method from the Operations class
+                ops.checkItemFromTransaction(productID, itemNameLabel, itemLengthLabel, itemPriceLabel, itemLeftLabel);
             }
         });
+        
 
         orderTotalLabel = new JLabel("ORDER TOTAL : " + currentTotalAmount);
         orderTotalLabel.setBounds(5, 600, 500, 35);
@@ -471,7 +539,64 @@ public class NewOrder extends JFrame {
         itemLeftLabel = new JLabel("STOCK: " + checkedStockLeft);
         itemLeftLabel.setBounds(270, 520, 250, 50);
         rightPanel.add(itemLeftLabel);
+
+        
+        noTransaction();
+
     } // end of New Order
+
+    public void noTransaction() {
+        button2.setEnabled(false);
+        button2.setBackground(Color.decode("#84817a"));
+
+        button3.setEnabled(false);
+        button3.setBackground(Color.decode("#84817a"));
+
+        button4.setEnabled(false);
+        button4.setBackground(Color.decode("#84817a"));
+
+        button5.setEnabled(false);
+        button5.setBackground(Color.decode("#84817a"));
+
+        addButton.setEnabled(false);
+        addButton.setBackground(Color.decode("#84817a"));
+
+        checkButton.setEnabled(false);
+        checkButton.setBackground(Color.decode("#84817a"));
+
+        searchProductButton.setEnabled(false);
+        searchProductButton.setBackground(Color.decode("#84817a"));
+
+        enterIdTextField.setEnabled(false);
+    }
+
+    public void yesTransaction() {
+        button1.setEnabled(false);
+        button1.setBackground(Color.decode("#84817a"));
+
+        button2.setEnabled(true);
+        button2.setBackground(Color.decode("#ff793f"));
+
+        button3.setEnabled(true);
+        button3.setBackground(Color.decode("#ff793f"));
+
+        button4.setEnabled(true);
+        button4.setBackground(Color.decode("#ff793f"));
+
+        button5.setEnabled(true);
+        button5.setBackground(Color.decode("#ff793f"));
+
+        addButton.setEnabled(true);
+        addButton.setBackground(Color.decode("#ff793f"));
+
+        checkButton.setEnabled(true);
+        checkButton.setBackground(Color.decode("#ff793f"));
+
+        searchProductButton.setEnabled(true);
+        searchProductButton.setBackground(Color.decode("#ff793f"));
+
+        enterIdTextField.setEnabled(true);
+    }
 
     /**
      * This method loads custom fonts (ttf files etc.) from the Fonts Folder

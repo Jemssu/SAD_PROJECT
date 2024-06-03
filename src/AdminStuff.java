@@ -8,15 +8,12 @@ import java.io.IOException;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.table.DefaultTableModel;
 
 public class AdminStuff extends JFrame{
     String bgColor = "#f7f1e3";
     @SuppressWarnings("unused")
     private Dashboard dashboard;
     JPanel rightPanel, leftPanel;
-    private JTable customerTable;
-    private JTextField searchBar;
     JButton button1, button2, button3, button4, button5, button6;
     JButton button7, button8, button9, button12, button10, button11;
 
