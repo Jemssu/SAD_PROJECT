@@ -2090,6 +2090,8 @@ public class Operations {
                             transaction_label.setText("Current Transaction: " + transactionID);
                             
                             // Optionally, you can return the transaction ID or perform other actions
+                            // Assign the generated transactionID to the global variable
+                            this.transactionID = String.valueOf(transactionID);
                         }
                     }
                 }
