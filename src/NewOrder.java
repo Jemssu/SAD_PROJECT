@@ -41,6 +41,8 @@ public class NewOrder extends JFrame {
     JLabel itemPriceLabel, itemLengthLabel, itemNameLabel, itemLeftLabel, orderTotalLabel;
     JTextField enterIdTextField;
     String checkedStockLeft = "", checkedType = "", checkedLength = "", checkedPrice = "";
+    JTable transaction_Table;
+    DefaultTableModel transaction_TableModel;
 
     Operations ops = new Operations();
 
@@ -255,7 +257,7 @@ public class NewOrder extends JFrame {
                     button2.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Cancel Order - Is Pressed");
                 } else {
-                    button2.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -263,9 +265,13 @@ public class NewOrder extends JFrame {
         button2.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println(transactionID);
+                int currenttransactionID = ops.getTransactionID(transaction_label);
 
-                ops.cancelCurrentTransaction(transactionID, transaction_label);
+                ops.putBackStock(currenttransactionID); 
+                ops.cancelCurrentTransaction(currenttransactionID, transaction_label);
+                ops.clearTransactionTable(transaction_TableModel);
+
+                noTransaction();
             }
         });
 
@@ -278,7 +284,7 @@ public class NewOrder extends JFrame {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 3 - Is Pressed");
                 } else {
-                    button3.setBackground(Color.decode("#ff793f")); // Change color back when released
+                   // button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -286,7 +292,7 @@ public class NewOrder extends JFrame {
         button3.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                
+                noTransaction();
             }
         });
 
@@ -299,7 +305,7 @@ public class NewOrder extends JFrame {
                     button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 4 - Is Pressed");
                 } else {
-                    button4.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -320,7 +326,7 @@ public class NewOrder extends JFrame {
                     button5.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 5 - Is Pressed");
                 } else {
-                    button5.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -341,7 +347,7 @@ public class NewOrder extends JFrame {
                     button6.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 6 - Is Pressed");
                 } else {
-                    button6.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button6.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -389,8 +395,9 @@ public class NewOrder extends JFrame {
         rightPanel.add(transaction_label);
 
         // Create a table model for the first table
-        DefaultTableModel transaction_TableModel = new DefaultTableModel();
+        transaction_TableModel = new DefaultTableModel();
         JTable transaction_Table = new JTable(transaction_TableModel);
+        transaction_Table.setDefaultEditor(Object.class, null);
 
         JScrollPane transaction_TableScroll = new JScrollPane(transaction_Table);
         transaction_TableScroll.setBounds(5, 40, 800, 290);
@@ -457,6 +464,7 @@ public class NewOrder extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String inputText = enterIdTextField.getText().trim(); // Trim to remove leading and trailing whitespaces
+
                 if (inputText.isEmpty()) {
                     // Handle empty input
                     JOptionPane.showMessageDialog(null, "Error: Product ID cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -466,10 +474,8 @@ public class NewOrder extends JFrame {
                     int productID = Integer.parseInt(inputText);
                     // Call the checkItemFromTransaction method from the Operations class
                     ops.checkItemFromTransaction(productID, itemNameLabel, itemLengthLabel, itemPriceLabel, itemLeftLabel);
-                    ops.addItemToTransaction(productID, transaction_TableModel);
-                    //ops.updateCurrentTransactionTable(Integer.parseInt(transactionID), transaction_TableModel);
+                    ops.addItemToTransaction(productID, transaction_TableModel, ops.getTransactionID(transaction_label));
 
-                    
                     // Update the order total label
                     System.out.println("Before updating transaction total: Current Total Amount = " + currentTotalAmount);
                     ops.updateTransactionTotal(transaction_TableModel, currentTotalAmount, orderTotalLabel);
@@ -520,23 +526,23 @@ public class NewOrder extends JFrame {
         });
         
 
-        orderTotalLabel = new JLabel("ORDER TOTAL : " + currentTotalAmount);
+        orderTotalLabel = new JLabel("Total Amount: ₱0.00");
         orderTotalLabel.setBounds(5, 600, 500, 35);
         rightPanel.add(orderTotalLabel);
 
-        itemNameLabel = new JLabel("TYPE: " + checkedType);
+        itemNameLabel = new JLabel("" + checkedType);
         itemNameLabel.setBounds(270, 340, 250, 50);
         rightPanel.add(itemNameLabel);
 
-        itemLengthLabel = new JLabel("LENGTH: " + checkedLength);
+        itemLengthLabel = new JLabel("" + checkedLength);
         itemLengthLabel.setBounds(270, 400, 250, 50);
         rightPanel.add(itemLengthLabel);
 
-        itemPriceLabel = new JLabel("PRICE: " + checkedPrice);
+        itemPriceLabel = new JLabel("" + checkedPrice);
         itemPriceLabel.setBounds(270, 460, 250, 50);
         rightPanel.add(itemPriceLabel);
 
-        itemLeftLabel = new JLabel("STOCK: " + checkedStockLeft);
+        itemLeftLabel = new JLabel("" + checkedStockLeft);
         itemLeftLabel.setBounds(270, 520, 250, 50);
         rightPanel.add(itemLeftLabel);
 
@@ -546,6 +552,9 @@ public class NewOrder extends JFrame {
     } // end of New Order
 
     public void noTransaction() {
+        button1.setEnabled(true);
+        button1.setBackground(Color.decode("#ff793f"));
+
         button2.setEnabled(false);
         button2.setBackground(Color.decode("#84817a"));
 
@@ -568,6 +577,8 @@ public class NewOrder extends JFrame {
         searchProductButton.setBackground(Color.decode("#84817a"));
 
         enterIdTextField.setEnabled(false);
+
+        clearOtherComponents();
     }
 
     public void yesTransaction() {
@@ -596,6 +607,16 @@ public class NewOrder extends JFrame {
         searchProductButton.setBackground(Color.decode("#ff793f"));
 
         enterIdTextField.setEnabled(true);
+
+        clearOtherComponents();
+    }
+
+    public void clearOtherComponents() {
+        enterIdTextField.setText("");
+        itemPriceLabel.setText("");
+        itemLeftLabel.setText("");
+        itemLengthLabel.setText("");
+        itemNameLabel.setText("");
     }
 
     /**

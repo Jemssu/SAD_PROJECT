@@ -89,7 +89,6 @@ public class Operations {
         }
         return false;
     }
-
     /**
      * Get the Login ID
      */
@@ -896,7 +895,8 @@ public class Operations {
             e.printStackTrace();
         }
     }
-    
+
+
     public void filterLargeInvTable(DefaultTableModel largeInventoryTableModel, int sortOption) {
         // Get the data vector from the table model
         Vector<Vector<Object>> dataVector = new Vector<>(largeInventoryTableModel.getDataVector());
@@ -2088,10 +2088,6 @@ public class Operations {
 
                             // Update the transaction label with the new transaction ID
                             transaction_label.setText("Current Transaction: " + transactionID);
-                            
-                            // Optionally, you can return the transaction ID or perform other actions
-                            // Assign the generated transactionID to the global variable
-                            this.transactionID = String.valueOf(transactionID);
                         }
                     }
                 }
@@ -2102,9 +2098,56 @@ public class Operations {
         }
     }
     
+    public int getTransactionID(JLabel transaction_label) {
+        String labelText = transaction_label.getText();
+        String prefix = "Current Transaction: ";
+        
+        if (labelText.startsWith(prefix)) {
+            try {
+                return Integer.parseInt(labelText.substring(prefix.length()));
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                // Error handling: Transaction ID is not a valid number
+            }
+        }
+        // Error handling: Label text is not in the expected format
+        return -1; // Return -1 or some other indication that the transaction ID could not be parsed
+    }
 
-    public void addItemToTransaction(int productID, DefaultTableModel transactionTableModel) {
+    public void updateTransactionTable(DefaultTableModel tableModel, int transactionID) {
+        try (Connection conn = connect()) {
+            // Query to fetch items associated with the given transaction ID
+            String query = "SELECT product_ID, product_Name, product_Quantity, item_Price, item_SubTotal " +
+                        "FROM tbl_item INNER JOIN tbl_product ON tbl_item.product_ID = tbl_product.product_ID " +
+                        "WHERE transaction_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, transactionID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    // Clear the existing table data
+                    tableModel.setRowCount(0);
+                    
+                    // Populate the table model with fetched data
+                    while (rs.next()) {
+                        int productID = rs.getInt("product_ID");
+                        String productName = rs.getString("product_Name");
+                        int quantity = rs.getInt("product_Quantity");
+                        double price = rs.getDouble("item_Price");
+                        double subtotal = rs.getDouble("item_SubTotal");
+                        
+                        // Add a row to the table model
+                        tableModel.addRow(new Object[]{productID, productName, quantity, price, subtotal});
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle database errors
+        }
+    }
+    
+    public void addItemToTransaction(int productID, DefaultTableModel transactionTableModel, int transactionID) {
         System.out.println("Received product ID in addItemToTransaction: " + productID);
+        System.out.println("Transaction ID in addItemToTransaction: " + transactionID);
         try (Connection conn = connect()) {
             // Check if the product exists
             if (!doesProductExist(productID)) {
@@ -2145,9 +2188,22 @@ public class Operations {
                             JOptionPane.showMessageDialog(null, "Error: Not enough product in stock.", "Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        
+
                         // Add the item to the transaction table
                         double subtotal = productPrice * quantity;
+
+                        // Insert the item into tbl_item
+                        String insertQuery = "INSERT INTO tbl_item (product_ID, transaction_ID, product_Quantity, item_Price, item_SubTotal) VALUES (?, ?, ?, ?, ?)";
+                        try (PreparedStatement insertPstmt = conn.prepareStatement(insertQuery)) {
+                            insertPstmt.setInt(1, productID);
+                            insertPstmt.setInt(2, transactionID);
+                            insertPstmt.setInt(3, quantity);
+                            insertPstmt.setDouble(4, productPrice);
+                            insertPstmt.setDouble(5, subtotal);
+                            int rowsInserted = insertPstmt.executeUpdate();
+                            System.out.println("Rows inserted into tbl_item: " + rowsInserted);
+                        }
+                        
                         transactionTableModel.addRow(new Object[]{productID, productName, quantity, productPrice, subtotal});
                         
                         // Update the stock
@@ -2160,7 +2216,6 @@ public class Operations {
             JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
     
 
     public boolean isThereEnoughProduct(int productID, int quantity) {
@@ -2215,56 +2270,50 @@ public class Operations {
         }
     }
 
-    public void cancelCurrentTransaction(String transactionID, JLabel transactionLabel) {
-        System.out.println("Transaction ID Received: " + transactionID);
+    public void cancelCurrentTransaction(int transactionID, JLabel transactionLabel) {
+        System.out.println("Canceling transaction ID: " + transactionID);
         try (Connection conn = connect()) {
-            // Set the current transaction's active status to 'cancelled'
-            String cancelQuery = "UPDATE tbl_transaction SET transaction_ActiveStatus = 'cancelled' WHERE transaction_ID = ?";
+            String cancelQuery = "UPDATE tbl_transaction SET transaction_ActiveStatus = 'inactive' WHERE transaction_ID = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(cancelQuery)) {
-                pstmt.setInt(1, Integer.parseInt(transactionID)); // Assuming transactionID is available
-                pstmt.executeUpdate();
+                pstmt.setInt(1, transactionID);
+                int rowsAffected = pstmt.executeUpdate();
+                System.out.println("Transaction cancel rows affected: " + rowsAffected);
             }
-    
-            // Clear the transaction label
-            transactionLabel.setText("");
-    
-            // Put back all the items added in the current transaction using putBackStock
-            DefaultTableModel transactionTableModel = new DefaultTableModel();
-            updateCurrentTransactionTable(Integer.parseInt(transactionID), transactionTableModel);
-            for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
-                int productID = (int) transactionTableModel.getValueAt(row, 0);
-                int quantity = (int) transactionTableModel.getValueAt(row, 2);
-                putBackStock(productID, quantity);
-            }
+            // Update the transaction label
+            transactionLabel.setText("Current Transaction: ");
         } catch (SQLException e) {
             e.printStackTrace();
             // Error handling: Display appropriate error message in your GUI
         }
     }
-
-    public void updateCurrentTransactionTable(int currentTransactionID, DefaultTableModel transactionTableModel) {
-        System.out.println("Transaction ID Received: " + currentTransactionID );
+    
+    
+    public void putBackStock(int transactionID) {
+        System.out.println("Putting back stock for transaction ID: " + transactionID);
         try (Connection conn = connect()) {
-            String query = "SELECT i.product_ID, p.product_Name, i.product_Quantity, i.item_Price, i.item_SubTotal " +
-                        "FROM tbl_item i " +
-                        "INNER JOIN tbl_product p ON i.product_ID = p.product_ID " +
-                        "WHERE i.transaction_ID = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-                pstmt.setInt(1, currentTransactionID); // Assuming currentTransactionID is available
+            // Retrieve items for the given transactionID
+            String selectQuery = "SELECT product_ID, product_Quantity FROM tbl_item WHERE transaction_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(selectQuery)) {
+                pstmt.setInt(1, transactionID);
                 try (ResultSet rs = pstmt.executeQuery()) {
-                    // Clear the table before updating it
-                    transactionTableModel.setRowCount(0);
-                    
-                    // Iterate through the results and update the table
+                    boolean hasItems = false;
                     while (rs.next()) {
+                        hasItems = true;
                         int productID = rs.getInt("product_ID");
-                        String productName = rs.getString("product_Name");
                         int quantity = rs.getInt("product_Quantity");
-                        double price = rs.getDouble("item_Price");
-                        double subtotal = rs.getDouble("item_SubTotal");
-                        
-                        // Add a row to the table
-                        transactionTableModel.addRow(new Object[]{productID, productName, quantity, price, subtotal});
+                        System.out.println("Retrieved product ID: " + productID + ", quantity: " + quantity);
+    
+                        // Update the product stock
+                        String updateStockQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft + ? WHERE product_ID = ?";
+                        try (PreparedStatement updatePstmt = conn.prepareStatement(updateStockQuery)) {
+                            updatePstmt.setInt(1, quantity);
+                            updatePstmt.setInt(2, productID);
+                            int rowsAffected = updatePstmt.executeUpdate();
+                            System.out.println("Stock updated for product ID: " + productID + ", rows affected: " + rowsAffected);
+                        }
+                    }
+                    if (!hasItems) {
+                        System.out.println("No items found for transaction ID: " + transactionID);
                     }
                 }
             }
@@ -2274,20 +2323,10 @@ public class Operations {
         }
     }
     
-    
-    public void putBackStock(int productID, int quantity) {
-        try (Connection conn = connect()) {
-            // Update the stock quantity for the given product
-            String putBackQuery = "UPDATE tbl_product SET product_Stock = product_Stock + ? WHERE product_ID = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(putBackQuery)) {
-                pstmt.setInt(1, quantity);
-                pstmt.setInt(2, productID);
-                pstmt.executeUpdate();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            // Error handling: Display appropriate error message in your GUI
-        }
+
+    public void clearTransactionTable(DefaultTableModel transactionTableModel) {
+        System.out.println("Clearing transaction table model");
+        transactionTableModel.setRowCount(0);
     }
     
 
@@ -2374,19 +2413,7 @@ public class Operations {
         }
     }
 
-    public double getSubtotalForProduct(int productID, DefaultTableModel transactionTableModel) {
-        double subtotal = 0.0;
-        for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
-            int id = (int) transactionTableModel.getValueAt(row, 0);
-            if (id == productID) {
-                int quantity = (int) transactionTableModel.getValueAt(row, 2); // Assuming quantity is in the third column
-                double price = (double) transactionTableModel.getValueAt(row, 3); // Assuming price is in the fourth column
-                subtotal = quantity * price;
-                break; // Break out of the loop once the subtotal is calculated for the specified product ID
-            }
-        }
-        return subtotal;
-    }
+
     
     public void updateTransactionTotal(DefaultTableModel transactionTableModel, int currentTotalAmount, JLabel orderTotalLabel) {
         double total = currentTotalAmount; // Initialize total with the currentTotalAmount
@@ -2397,23 +2424,30 @@ public class Operations {
         System.out.println("New Total: " + total); // Print the new total
         orderTotalLabel.setText("ORDER TOTAL: " + total);
     }
-    
-    
-    
-    
-    
 
-
-
-
-
-
-    
-
-    // WORK IN PROGRESS / FUTURE ADDITIONS
-    /**
-     *  -> ADD LOGGING / WHO AND WHEN DID A PERSON GO IN, maybe through text file...
-     *  -> rename tables
-     */
+    public void updateTransactionTotalBySQL(int transactionID, JLabel orderTotalLabel) {
+        try (Connection conn = connect()) {
+            // Query to sum the subtotal of all items in the transaction
+            String query = "SELECT SUM(item_SubTotal) AS total FROM tbl_item WHERE transaction_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, transactionID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        // Get the total amount from the result set
+                        double totalAmount = rs.getDouble("total");
+                        
+                        // Update the JLabel with the total amount
+                        orderTotalLabel.setText("Total Amount: ₱" + totalAmount);
+                    } else {
+                        // If no items found for the transaction, set total amount to 0
+                        orderTotalLabel.setText("Total Amount: ₱0.00");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle database errors
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 }
-
