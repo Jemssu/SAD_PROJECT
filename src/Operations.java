@@ -2953,6 +2953,12 @@ public class Operations {
 
     public void seeFullDetailsTransaction() {
         // Get Customer Info and Amount Needed Left to Pay
+
+        // prompt using jpane the transaction iD
+
+        // check to see if it exists and if transaction_ActiveStatus = 'active'
+
+        
     }
 
     public void resetFilterFile() {
