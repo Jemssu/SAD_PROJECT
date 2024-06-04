@@ -1,5 +1,9 @@
 import java.awt.Component;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -8,10 +12,13 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.util.stream.IntStream;
 
@@ -1076,17 +1083,32 @@ public class Operations {
                 }
                 int removeAmount = Integer.parseInt(removeAmountString);
     
-                // Update database
+                // Check if the amount to remove is available
                 try (Connection connection = connect()) {
-                    String updateQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft - ? WHERE product_ID = ?";
-                    PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
-                    updateStatement.setInt(1, removeAmount);
-                    updateStatement.setInt(2, productIDInput);
-                    int rowsUpdated = updateStatement.executeUpdate();
-                    if (rowsUpdated > 0) {
-                        JOptionPane.showMessageDialog(null, "Stock removed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    String selectQuery = "SELECT product_StockLeft FROM tbl_product WHERE product_ID = ?";
+                    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+                    selectStatement.setInt(1, productIDInput);
+                    ResultSet resultSet = selectStatement.executeQuery();
+                    if (resultSet.next()) {
+                        int currentStock = resultSet.getInt("product_StockLeft");
+                        if (currentStock < removeAmount) {
+                            JOptionPane.showMessageDialog(null, "Insufficient stock. Current stock: " + currentStock, "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+    
+                        // Update database
+                        String updateQuery = "UPDATE tbl_product SET product_StockLeft = product_StockLeft - ? WHERE product_ID = ?";
+                        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                        updateStatement.setInt(1, removeAmount);
+                        updateStatement.setInt(2, productIDInput);
+                        int rowsUpdated = updateStatement.executeUpdate();
+                        if (rowsUpdated > 0) {
+                            JOptionPane.showMessageDialog(null, "Stock removed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Failed to remove stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
                     } else {
-                        JOptionPane.showMessageDialog(null, "Failed to remove stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             } else {
@@ -1099,7 +1121,7 @@ public class Operations {
             JOptionPane.showMessageDialog(null, "An error occurred while updating stock.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
+    
     public void emptyStock() {
         // Ask for product ID using JOptionPane
         String input = JOptionPane.showInputDialog(null, "Enter Product ID to empty stock:", "Empty Stock", JOptionPane.QUESTION_MESSAGE);
@@ -1118,20 +1140,35 @@ public class Operations {
     
             // Check if Product ID exists
             if (doesProductExist(productIDInput)) {
-                // Confirm if user wants to empty stock
-                int confirmResult = JOptionPane.showConfirmDialog(null, "Are you sure you want to empty the stock for this product?", "Confirm Empty Stock", JOptionPane.YES_NO_OPTION);
-                if (confirmResult == JOptionPane.YES_OPTION) {
-                    // Update database to set stock left to 0
-                    try (Connection connection = connect()) {
-                        String updateQuery = "UPDATE tbl_product SET product_StockLeft = 0 WHERE product_ID = ?";
-                        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
-                        updateStatement.setInt(1, productIDInput);
-                        int rowsUpdated = updateStatement.executeUpdate();
-                        if (rowsUpdated > 0) {
-                            JOptionPane.showMessageDialog(null, "Stock emptied successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(null, "Failed to empty stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                // Check if the stock is already empty
+                try (Connection connection = connect()) {
+                    String selectQuery = "SELECT product_StockLeft FROM tbl_product WHERE product_ID = ?";
+                    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+                    selectStatement.setInt(1, productIDInput);
+                    ResultSet resultSet = selectStatement.executeQuery();
+                    if (resultSet.next()) {
+                        int currentStock = resultSet.getInt("product_StockLeft");
+                        if (currentStock == 0) {
+                            JOptionPane.showMessageDialog(null, "Stock is already empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
                         }
+    
+                        // Confirm if user wants to empty stock
+                        int confirmResult = JOptionPane.showConfirmDialog(null, "Are you sure you want to empty the stock for this product?", "Confirm Empty Stock", JOptionPane.YES_NO_OPTION);
+                        if (confirmResult == JOptionPane.YES_OPTION) {
+                            // Update database to set stock left to 0
+                            String updateQuery = "UPDATE tbl_product SET product_StockLeft = 0 WHERE product_ID = ?";
+                            PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+                            updateStatement.setInt(1, productIDInput);
+                            int rowsUpdated = updateStatement.executeUpdate();
+                            if (rowsUpdated > 0) {
+                                JOptionPane.showMessageDialog(null, "Stock emptied successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Failed to empty stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Product ID does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             } else {
@@ -1144,6 +1181,7 @@ public class Operations {
             JOptionPane.showMessageDialog(null, "An error occurred while updating stock.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+    
     
     public void changeStockStatus() {
         // Ask for product ID using JOptionPane
@@ -1936,134 +1974,6 @@ public class Operations {
     /**
      * ORDER LIST PANEL METHODS
      */
-    
-    /**
-     * Updates the transactions table with recent data
-     */
-    public void updateTransactionsTable(DefaultTableModel transaction_TableModel, int offset) {
-        String query = "SELECT transaction_ID, transaction_TotalPrice, transaction_TotalPaid, transaction_OrderStatus " +
-                    "FROM tbl_transaction " +
-                    "WHERE (transaction_OrderStatus = 'pending' OR transaction_ActiveStatus = 'active') " +
-                    "AND transaction_Date >= NOW() - INTERVAL 7 DAY " +
-                    "ORDER BY transaction_Date DESC " +
-                    "LIMIT " + PAGE_SIZE + " OFFSET " + offset + ";";
-
-        try (Connection conn = connect();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query)) {
-
-            transaction_TableModel.setRowCount(0);  // Clear the table
-
-            while (rs.next()) {
-                int transactionId = rs.getInt("transaction_ID");
-                double totalPrice = rs.getDouble("transaction_TotalPrice");
-                double totalPaid = rs.getDouble("transaction_TotalPaid");
-                String status = rs.getString("transaction_OrderStatus");
-
-                transaction_TableModel.addRow(new Object[]{transactionId, totalPrice, totalPaid, status});
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Updates the items table with data from the selected transaction
-     */
-    public void updateItemsTable(DefaultTableModel items_TableModel, int transactionId) {
-        String query = "SELECT i.product_ID, p.product_Name, i.item_Price, i.product_Quantity, i.item_SubTotal " +
-                    "FROM tbl_item i JOIN tbl_product p ON i.product_ID = p.product_ID " +
-                    "WHERE i.transaction_ID = ?;";
-
-        try (Connection conn = connect();
-            PreparedStatement pstmt = conn.prepareStatement(query)) {
-
-            pstmt.setInt(1, transactionId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-
-                items_TableModel.setRowCount(0);  // Clear the table
-
-                while (rs.next()) {
-                    int productId = rs.getInt("product_ID");
-                    String productName = rs.getString("product_Name");
-                    double itemPrice = rs.getDouble("item_Price");
-                    int quantity = rs.getInt("product_Quantity");
-                    double subTotal = rs.getDouble("item_SubTotal");
-
-                    items_TableModel.addRow(new Object[]{productId, productName, itemPrice, quantity, subTotal});
-                }
-
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Checks if there are more rows available beyond the current page
-     */
-    public boolean hasMoreRows(int offset) {
-        String query = "SELECT COUNT(*) AS rowcount FROM tbl_transaction " +
-                        "WHERE (transaction_OrderStatus = 'pending' OR transaction_ActiveStatus = 'active') " +
-                        "AND transaction_Date >= NOW() - INTERVAL 7 DAY;";
-    
-        try (Connection conn = connect();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query)) {
-    
-            if (rs.next()) {
-                int rowCount = rs.getInt("rowcount");
-                return rowCount > offset;
-            }
-    
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-    
-
-    public void modifyTransaction() {
-        // IN-LINE WITH ORDER
-
-        // ask to change status or edit cart items
-    }
-
-    public void addPaymentToTransaction() {
-        // get the current paidAmount 
-
-        // subtract the value from paidAmount to orderTotal
-
-        // show amount and input
-    }
-
-    public void removeTransaction() {
-
-        // get transaction_ID using jpane and search in sql
-
-        // ask confirmation to delete the order
-
-        // check the items in the transactio table (and update the stock table)
-
-        // it adds back the items gathered / returns it
-
-        // make transaction_activestatus = inactive
-    }
-
-    public void seeFullDetailsTransaction() {
-        // Get Customer Info and Amount Needed Left to Pay
-    }
-
-    public void seeAllTransactions() {
-        // able to select : time period (enter range of date) , show all (even completed)
-    }
-
-    //----------------------------------------------------------------
-    /**
-     * ORDER LIST PANEL METHODS
-     */
 
     public void newTransaction(JLabel transaction_label, int employee_ID) {
         try (Connection conn = connect()) {
@@ -2413,8 +2323,6 @@ public class Operations {
         }
     }
 
-
-    
     public void updateTransactionTotal(DefaultTableModel transactionTableModel, int currentTotalAmount, JLabel orderTotalLabel) {
         double total = currentTotalAmount; // Initialize total with the currentTotalAmount
         for (int row = 0; row < transactionTableModel.getRowCount(); row++) {
@@ -2422,7 +2330,7 @@ public class Operations {
             total += subtotal;
         }
         System.out.println("New Total: " + total); // Print the new total
-        orderTotalLabel.setText("ORDER TOTAL: " + total);
+        orderTotalLabel.setText("Total Amount: ₱" + total);
     }
 
     public void updateTransactionTotalBySQL(int transactionID, JLabel orderTotalLabel) {
@@ -2450,4 +2358,772 @@ public class Operations {
             JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    private boolean hasItemsInTransaction(Connection conn, int transactionID) throws SQLException {
+        // Check if there are items in the transaction
+        String query = "SELECT COUNT(*) FROM tbl_item WHERE transaction_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, transactionID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int itemCount = rs.getInt(1);
+                    return itemCount > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean confirmTransaction(int transactionID) {
+        try (Connection conn = connect()) {
+
+            if (!hasItemsInTransaction(conn, transactionID)) {
+                JOptionPane.showMessageDialog(null, "Error: No items in this transaction. Cannot confirm.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Get the total amount and total paid for the transaction
+            double totalAmount = getTotalAmountForTransaction(conn, transactionID);
+            double totalPaid = getTotalPaidForTransaction(conn, transactionID);
+    
+            if (totalAmount == -1 || totalPaid == -1) {
+                // Error occurred while fetching total amount or total paid
+                JOptionPane.showMessageDialog(null, "Error: Failed to fetch total amount or total paid.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+    
+            // Prompt for amount paid
+            String amountPaidString = JOptionPane.showInputDialog(null, "Enter amount paid:", "Confirm Transaction", JOptionPane.PLAIN_MESSAGE);
+            if (amountPaidString == null || amountPaidString.isEmpty()) {
+                // User canceled or entered an empty string
+                return false;
+            }
+    
+            // Convert the input to double
+            double amountPaid;
+            try {
+                amountPaid = Double.parseDouble(amountPaidString);
+                if (amountPaid < 0) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Error: Invalid amount paid.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+    
+            // Determine order status based on total paid
+            String orderStatus;
+            if (amountPaid < totalAmount) {
+                // Total paid is less than total amount
+                JOptionPane.showMessageDialog(null, "Customer details must be added.", "Warning", JOptionPane.WARNING_MESSAGE);
+                while (true) {
+                    if (addCustomerWhoDidNotPayFull(conn, transactionID)) {
+                        orderStatus = "pending";
+                        break;
+                    }
+                }
+            } else {
+                // Total paid is equal to or greater than total amount
+                orderStatus = "paid";
+            }
+    
+            // Calculate change amount if applicable
+            double changeAmount = amountPaid - totalAmount;
+            if (changeAmount > 0) {
+                // Show change amount if there's change
+                JOptionPane.showMessageDialog(null, "Change: $" + String.format("%.2f", changeAmount), "Change", JOptionPane.INFORMATION_MESSAGE);
+            }
+    
+            // Update the transaction with the new order status, total amount, and total paid
+            updateTransaction(conn, transactionID, totalAmount, amountPaid, orderStatus);
+            return true; // Transaction successfully confirmed
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+    
+    private void updateTransaction(Connection conn, int transactionID, double totalAmount, double amountPaid, String orderStatus) throws SQLException {
+        // Update the transaction with the new total amount, total paid, and order status
+        String updateQuery = "UPDATE tbl_transaction SET transaction_TotalPrice = ?, transaction_TotalPaid = ?, transaction_OrderStatus = ? WHERE transaction_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
+            pstmt.setDouble(1, totalAmount);
+            pstmt.setDouble(2, amountPaid);
+            pstmt.setString(3, orderStatus);
+            pstmt.setInt(4, transactionID);
+            pstmt.executeUpdate();
+        }
+    }
+
+    private double getTotalPaidForTransaction(Connection conn, int transactionID) throws SQLException {
+        // Query to fetch the total amount paid for the transaction
+        String query = "SELECT transaction_TotalPaid FROM tbl_transaction WHERE transaction_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, transactionID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("transaction_TotalPaid");
+                }
+            }
+        }
+        // If an error occurs while fetching total paid, return -1
+        return -1;
+    }
+    
+    private double getTotalAmountForTransaction(Connection conn, int transactionID) throws SQLException {
+        // Query to sum the subtotal of all items in the transaction
+        String query = "SELECT SUM(item_SubTotal) AS total FROM tbl_item WHERE transaction_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, transactionID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("total");
+                }
+            }
+        }
+        // If an error occurs while fetching total amount, return -1
+        return -1;
+    }
+
+    public boolean addCustomerWhoDidNotPayFull(Connection conn, int transactionID) {
+        while (true) {
+            try {
+                // Check if the transaction already has a customer associated with it
+                if (isCustomerAssociated(conn, transactionID)) {
+                    return true; // Customer already associated
+                }
+    
+                // Prompt for customer details
+                String firstName = JOptionPane.showInputDialog(null, "Enter customer's first name:", "Customer Details", JOptionPane.PLAIN_MESSAGE);
+                String lastName = JOptionPane.showInputDialog(null, "Enter customer's last name (optional):", "Customer Details", JOptionPane.PLAIN_MESSAGE);
+                String contactNumber = JOptionPane.showInputDialog(null, "Enter customer's contact number (must start with 639 and be 12 digits long):", "Customer Details", JOptionPane.PLAIN_MESSAGE);
+    
+                if (firstName == null || firstName.isEmpty() || contactNumber == null || contactNumber.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "First name and contact number are required.", "Error", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+    
+                if (!isValidContactNumber(contactNumber)) {
+                    JOptionPane.showMessageDialog(null, "Contact number must start with 639 and be 12 digits long.", "Error", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+    
+                // Insert the customer into tbl_customer
+                int customerID = insertCustomer(conn, firstName, lastName, contactNumber);
+                if (customerID != -1) {
+                    // Update the transaction with the customer ID
+                    updateTransactionWithCustomer(conn, transactionID, customerID);
+                    return true;
+                } else {
+                    JOptionPane.showMessageDialog(null, "Error: Failed to add customer.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error: Database error while adding customer details.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private boolean isCustomerAssociated(Connection conn, int transactionID) throws SQLException {
+        // Check if the transaction already has a customer associated with it
+        String query = "SELECT customer_ID FROM tbl_transaction WHERE transaction_ID = ? AND customer_ID IS NOT NULL";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, transactionID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+    
+    private boolean isValidContactNumber(String contactNumber) {
+        // Validate contact number: must start with 639 and be 12 digits long
+        return contactNumber.startsWith("639") && contactNumber.length() == 12 && contactNumber.matches("\\d+");
+    }
+    
+    private int insertCustomer(Connection conn, String firstName, String lastName, String contactNumber) throws SQLException {
+        // Insert the customer's details into tbl_customer
+        String insertQuery = "INSERT INTO tbl_customer (customer_FirstName, customer_LastName, customer_ContactNum) VALUES (?, ?, ?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, firstName);
+            pstmt.setString(2, lastName);
+            pstmt.setString(3, contactNumber);
+            int rowsInserted = pstmt.executeUpdate();
+            if (rowsInserted == 0) {
+                return -1; // Insert failed
+            }
+            // Retrieve the auto-generated customer ID
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    return -1; // Failed to retrieve customer ID
+                }
+            }
+        }
+    }
+    
+    private void updateTransactionWithCustomer(Connection conn, int transactionID, int customerID) throws SQLException {
+        // Update the transaction to associate it with the newly added customer
+        String updateQuery = "UPDATE tbl_transaction SET customer_ID = ? WHERE transaction_ID = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
+            pstmt.setInt(1, customerID);
+            pstmt.setInt(2, transactionID);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public void modifyTransaction(int transactionID, JLabel orderTotalLabel) {
+        try (Connection conn = connect()) {
+            // Prompt for product ID
+            String productIDString = JOptionPane.showInputDialog(null, "Enter product ID to modify:", "Modify Transaction", JOptionPane.PLAIN_MESSAGE);
+            if (productIDString == null || productIDString.isEmpty()) {
+                // User canceled or entered an empty string
+                return;
+            }
+    
+            int productID;
+            try {
+                productID = Integer.parseInt(productIDString);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Error: Invalid product ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // Check if the product exists in the transaction
+            String query = "SELECT product_Quantity, item_Price FROM tbl_item WHERE transaction_ID = ? AND product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, transactionID);
+                pstmt.setInt(2, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int currentQuantity = rs.getInt("product_Quantity");
+                        double itemPrice = rs.getDouble("item_Price");
+    
+                        // Ask if the user wants to remove or update the quantity
+                        String[] options = {"Remove Item", "Update Quantity"};
+                        int choice = JOptionPane.showOptionDialog(null, "Choose an option:", "Modify Transaction",
+                                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+    
+                        if (choice == 0) {
+                            // Remove item
+                            String deleteQuery = "DELETE FROM tbl_item WHERE transaction_ID = ? AND product_ID = ?";
+                            try (PreparedStatement deletePstmt = conn.prepareStatement(deleteQuery)) {
+                                deletePstmt.setInt(1, transactionID);
+                                deletePstmt.setInt(2, productID);
+                                int rowsDeleted = deletePstmt.executeUpdate();
+                                System.out.println("Rows deleted from tbl_item: " + rowsDeleted);
+    
+                                // Update the stock
+                                addStock(productID, currentQuantity);
+    
+                                // Update the transaction total
+                                updateTransactionTotalBySQL(transactionID, orderTotalLabel);
+                            }
+                        } else if (choice == 1) {
+                            // Update quantity
+                            String newQuantityString = JOptionPane.showInputDialog(null, "Enter new quantity:", "Update Quantity", JOptionPane.PLAIN_MESSAGE);
+                            if (newQuantityString == null || newQuantityString.isEmpty()) {
+                                // User canceled or entered an empty string
+                                return;
+                            }
+    
+                            int newQuantity;
+                            try {
+                                newQuantity = Integer.parseInt(newQuantityString);
+                                if (newQuantity <= 0) {
+                                    throw new NumberFormatException();
+                                }
+                            } catch (NumberFormatException e) {
+                                JOptionPane.showMessageDialog(null, "Error: Invalid quantity.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+    
+                            // Check if there is enough product
+                            if (!isThereEnoughProduct(productID, newQuantity - currentQuantity)) {
+                                JOptionPane.showMessageDialog(null, "Error: Not enough product in stock.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+    
+                            // Update the item in tbl_item
+                            double newSubtotal = itemPrice * newQuantity;
+                            String updateQuery = "UPDATE tbl_item SET product_Quantity = ?, item_SubTotal = ? WHERE transaction_ID = ? AND product_ID = ?";
+                            try (PreparedStatement updatePstmt = conn.prepareStatement(updateQuery)) {
+                                updatePstmt.setInt(1, newQuantity);
+                                updatePstmt.setDouble(2, newSubtotal);
+                                updatePstmt.setInt(3, transactionID);
+                                updatePstmt.setInt(4, productID);
+                                int rowsUpdated = updatePstmt.executeUpdate();
+                                System.out.println("Rows updated in tbl_item: " + rowsUpdated);
+    
+                                // Update the stock
+                                int quantityDifference = newQuantity - currentQuantity;
+                                if (quantityDifference != 0) {
+                                    if (quantityDifference > 0) {
+                                        removeStock(productID, quantityDifference);
+                                    } else {
+                                        addStock(productID, -quantityDifference);
+                                    }
+                                }
+    
+                                // Update the transaction total
+                                updateTransactionTotalBySQL(transactionID, orderTotalLabel);
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Error: Product ID not found in this transaction.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void addStock(int productID, int quantity) {
+        try (Connection conn = connect()) {
+            // Fetch the current stock left
+            String query = "SELECT product_StockLeft FROM tbl_product WHERE product_ID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, productID);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int currentStock = rs.getInt("product_StockLeft");
+    
+                        // Calculate the new stock after adding the specified quantity
+                        int newStock = currentStock + quantity;
+    
+                        // Update the stock in the database
+                        String updateQuery = "UPDATE tbl_product SET product_StockLeft = ? WHERE product_ID = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, newStock);
+                            updateStmt.setInt(2, productID);
+                            updateStmt.executeUpdate();
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    //----------------------------------------------------------------
+    /**
+     * ORDER LIST PANEL METHODS
+     */
+    
+    /**
+     * Updates the transactions table with recent data
+     */
+    public void updateTransactionsTable(DefaultTableModel transaction_TableModel, int offset) {
+        String query = "SELECT transaction_ID, transaction_TotalPrice, transaction_TotalPaid, transaction_OrderStatus " +
+                    "FROM tbl_transaction " +
+                    "WHERE (transaction_OrderStatus = 'pending' AND transaction_ActiveStatus = 'active') " +
+                    "AND transaction_Date >= NOW() - INTERVAL 7 DAY " +
+                    "ORDER BY transaction_Date DESC " +
+                    "LIMIT " + PAGE_SIZE + " OFFSET " + offset + ";";
+
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+
+            transaction_TableModel.setRowCount(0);  // Clear the table
+
+            while (rs.next()) {
+                int transactionId = rs.getInt("transaction_ID");
+                double totalPrice = rs.getDouble("transaction_TotalPrice");
+                double totalPaid = rs.getDouble("transaction_TotalPaid");
+                String status = rs.getString("transaction_OrderStatus");
+
+                transaction_TableModel.addRow(new Object[]{transactionId, totalPrice, totalPaid, status});
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Updates the items table with data from the selected transaction
+     */
+    public void updateItemsTable(DefaultTableModel items_TableModel, int transactionId) {
+        String query = "SELECT i.product_ID, p.product_Name, i.item_Price, i.product_Quantity, i.item_SubTotal " +
+                    "FROM tbl_item i JOIN tbl_product p ON i.product_ID = p.product_ID " +
+                    "WHERE i.transaction_ID = ?;";
+
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, transactionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+
+                items_TableModel.setRowCount(0);  // Clear the table
+
+                while (rs.next()) {
+                    int productId = rs.getInt("product_ID");
+                    String productName = rs.getString("product_Name");
+                    double itemPrice = rs.getDouble("item_Price");
+                    int quantity = rs.getInt("product_Quantity");
+                    double subTotal = rs.getDouble("item_SubTotal");
+
+                    items_TableModel.addRow(new Object[]{productId, productName, itemPrice, quantity, subTotal});
+                }
+
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Checks if there are more rows available beyond the current page
+     */
+    public boolean hasMoreRows(int offset) {
+        String query = "SELECT COUNT(*) AS rowcount FROM tbl_transaction " +
+                        "WHERE (transaction_OrderStatus = 'pending' AND transaction_ActiveStatus = 'active') " +
+                        "AND transaction_Date >= NOW() - INTERVAL 7 DAY;";
+    
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+    
+            if (rs.next()) {
+                int rowCount = rs.getInt("rowcount");
+                return rowCount > offset;
+            }
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public void addPaymentToTransaction() {
+        try (Connection conn = connect()) {
+            // Ask for transaction ID using JOptionPane
+            String transactionIdStr = JOptionPane.showInputDialog("Enter Transaction ID:");
+            if (transactionIdStr == null) {
+                return; // User canceled the input dialog
+            }
+            
+            int transactionId;
+            try {
+                transactionId = Integer.parseInt(transactionIdStr);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Invalid Transaction ID.");
+                return;
+            }
+            
+            // Check if transaction ID exists and if transaction_ActiveStatus = 'active'
+            String checkQuery = "SELECT transaction_TotalPrice, transaction_TotalPaid FROM tbl_transaction " +
+                                "WHERE transaction_ID = ? AND transaction_ActiveStatus = 'active'";
+            
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                checkStmt.setInt(1, transactionId);
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (rs.next()) {
+                    double totalPrice = rs.getDouble("transaction_TotalPrice");
+                    double totalPaid = rs.getDouble("transaction_TotalPaid");
+                    
+                    // Show the current transaction_TotalPrice with transaction_TotalPaid
+                    String message = String.format("Total Amount: %.2f\nTotal Paid: %.2f", totalPrice, totalPaid);
+                    String amountPaidStr = JOptionPane.showInputDialog(message + "\nEnter amount to pay:");
+                    
+                    if (amountPaidStr == null) {
+                        return; // User canceled the input dialog
+                    }
+                    
+                    double amountPaid;
+                    try {
+                        amountPaid = Double.parseDouble(amountPaidStr);
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(null, "Invalid amount.");
+                        return;
+                    }
+                    
+                    double newTotalPaid = totalPaid + amountPaid;
+                    
+                    // If amountPaid + currentTotalPaid is equal or greater than totalAmount, set transaction_OrderStatus to 'paid'
+                    String updateQuery;
+                    if (newTotalPaid >= totalPrice) {
+                        updateQuery = "UPDATE tbl_transaction SET transaction_TotalPaid = ?, transaction_OrderStatus = 'paid' " +
+                                    "WHERE transaction_ID = ?";
+                    } else {
+                        updateQuery = "UPDATE tbl_transaction SET transaction_TotalPaid = ? WHERE transaction_ID = ?";
+                    }
+                    
+                    // Update transaction_TotalPaid with the new amount
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                        updateStmt.setDouble(1, newTotalPaid);
+                        updateStmt.setInt(2, transactionId);
+                        updateStmt.executeUpdate();
+                        JOptionPane.showMessageDialog(null, "Payment updated successfully.");
+                    }
+                    
+                } else {
+                    JOptionPane.showMessageDialog(null, "Transaction ID not found or is not active.");
+                }
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    
+    public void removeTransaction() {
+        try (Connection conn = connect()) {
+            // Ask for transaction ID using JOptionPane
+            String transactionIdStr = JOptionPane.showInputDialog("Enter Transaction ID:");
+            if (transactionIdStr == null) {
+                return; // User canceled the input dialog
+            }
+            
+            int transactionId;
+            try {
+                transactionId = Integer.parseInt(transactionIdStr);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Invalid Transaction ID.");
+                return;
+            }
+            
+            // Check if transaction ID exists and if transaction_ActiveStatus = 'active'
+            String checkQuery = "SELECT transaction_ActiveStatus FROM tbl_transaction WHERE transaction_ID = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                checkStmt.setInt(1, transactionId);
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (rs.next()) {
+                    String activeStatus = rs.getString("transaction_ActiveStatus");
+                    
+                    if ("active".equals(activeStatus)) {
+                        int confirm = JOptionPane.showConfirmDialog(null, 
+                                "Do you wish to cancel this transaction?", "Confirm Cancel", 
+                                JOptionPane.YES_NO_OPTION);
+                        
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            // Set transaction_ActiveStatus = 'inactive'
+                            String updateQuery = "UPDATE tbl_transaction SET transaction_ActiveStatus = 'inactive' WHERE transaction_ID = ?";
+                            try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                                updateStmt.setInt(1, transactionId);
+                                updateStmt.executeUpdate();
+                            }
+                            
+                            // Return the items using the addStock method
+                            String itemsQuery = "SELECT product_ID, product_Quantity FROM tbl_item WHERE transaction_ID = ?";
+                            try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
+                                itemsStmt.setInt(1, transactionId);
+                                ResultSet itemsRs = itemsStmt.executeQuery();
+                                
+                                while (itemsRs.next()) {
+                                    int productId = itemsRs.getInt("product_ID");
+                                    int quantity = itemsRs.getInt("product_Quantity");
+                                    addStock(productId, quantity);
+                                }
+                            }
+                            
+                            JOptionPane.showMessageDialog(null, "Transaction canceled and items restocked.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Transaction is not active or does not exist.");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Transaction ID not found.");
+                }
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error: Database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+
+    public void modifyTransaction() {
+        // IN-LINE WITH ORDER
+
+        // ask to change status or edit cart items
+    }
+
+
+    public void seeFullDetailsTransaction() {
+        // Get Customer Info and Amount Needed Left to Pay
+    }
+
+    public void resetFilterFile() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("filter.txt"))) {
+            writer.write("dateSelectRange.fromDate = " + LocalDate.now().minusDays(7) + "\n");
+            writer.write("dateSelectRange.toDate = " + LocalDate.now() + "\n");
+            writer.write("orderStatus.showStatus = pending\n");
+            writer.write("totalPriceRange.minPrice = 0.00\n");
+            writer.write("totalPriceRange.maxPrice = 1000000.00\n");
+            writer.write("customerName.searchQuery = *\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void writeFilterFile(Map<String, String> filters) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("filter.txt"))) {
+            for (Map.Entry<String, String> entry : filters.entrySet()) {
+                writer.write(entry.getKey() + " = " + entry.getValue() + "\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String, String> readFilterFile() {
+        Map<String, String> filters = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader("filter.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length == 2) {
+                    filters.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return filters;
+    }
+
+
+    public void updateTableFromFilterFile(DefaultTableModel transaction_TableModel) {
+        Map<String, String> filters = readFilterFile();
+    
+        String fromDate = filters.get("dateSelectRange.fromDate");
+        String toDate = filters.get("dateSelectRange.toDate");
+        String orderStatus = filters.get("orderStatus.showStatus");
+        double minPrice = Double.parseDouble(filters.get("totalPriceRange.minPrice"));
+        double maxPrice = Double.parseDouble(filters.get("totalPriceRange.maxPrice"));
+        String searchQuery = filters.get("customerName.searchQuery");
+    
+        String query = "SELECT transaction_ID, transaction_TotalPrice, transaction_TotalPaid, transaction_OrderStatus " +
+                        "FROM tbl_transaction " +
+                        "WHERE transaction_OrderStatus = '" + orderStatus + "' " +
+                        "AND transaction_ActiveStatus = 'active' " +
+                        "AND transaction_Date BETWEEN '" + fromDate + "' AND '" + toDate + "' " +
+                        "AND transaction_TotalPrice BETWEEN " + minPrice + " AND " + maxPrice + " " +
+                        (searchQuery.equals("all") ? "" : "AND customer_Name LIKE '%" + searchQuery + "%' ") +
+                        "ORDER BY transaction_Date DESC;";
+    
+        try (Connection conn = connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query)) {
+    
+            transaction_TableModel.setRowCount(0);  // Clear the table
+    
+            while (rs.next()) {
+                int transactionId = rs.getInt("transaction_ID");
+                double totalPrice = rs.getDouble("transaction_TotalPrice");
+                double totalPaid = rs.getDouble("transaction_TotalPaid");
+                String status = rs.getString("transaction_OrderStatus");
+    
+                transaction_TableModel.addRow(new Object[]{transactionId, totalPrice, totalPaid, status});
+            }
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void selectFilter() {
+        String[] options = {"Date Range", "Order Status", "Total Price Range", "Customer Name"};
+        String selectedOption = (String) JOptionPane.showInputDialog(null, "Select Filter Option", 
+                            "Filter Options", JOptionPane.QUESTION_MESSAGE, 
+                            null, options, options[0]);
+        if (selectedOption != null) {
+            switch (selectedOption) {
+                case "Date Range":
+                    dateSelectRangeFilter();
+                    break;
+                case "Order Status":
+                    String[] statusOptions = {"pending", "paid", "both"};
+                    String status = (String) JOptionPane.showInputDialog(null, "Select Order Status", 
+                                "Order Status", JOptionPane.QUESTION_MESSAGE, 
+                                null, statusOptions, statusOptions[0]);
+                    if (status != null) {
+                        orderStatusFilter(status);
+                    }
+                    break;
+                case "Total Price Range":
+                    String minPriceStr = JOptionPane.showInputDialog("Enter Minimum Price:");
+                    String maxPriceStr = JOptionPane.showInputDialog("Enter Maximum Price:");
+                    if (minPriceStr != null && maxPriceStr != null) {
+                        try {
+                            double minPrice = Double.parseDouble(minPriceStr);
+                            double maxPrice = Double.parseDouble(maxPriceStr);
+                            totalPriceRangeFilter(maxPrice, minPrice);
+                        } catch (NumberFormatException e) {
+                            JOptionPane.showMessageDialog(null, "Invalid price values.");
+                        }
+                    }
+                    break;
+                case "Customer Name":
+                    String searchQuery = JOptionPane.showInputDialog("Enter Customer Name:");
+                    if (searchQuery != null) {
+                        customerNameFilter(searchQuery);
+                    }
+                    break;
+            }
+        }
+    }
+    
+
+    public void dateSelectRangeFilter() {
+        JTextField fromDateField = new JTextField(10);
+        JTextField toDateField = new JTextField(10);
+    
+        JPanel myPanel = new JPanel();
+        myPanel.add(new JLabel("From Date (YYYY-MM-DD):"));
+        myPanel.add(fromDateField);
+        myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+        myPanel.add(new JLabel("To Date (YYYY-MM-DD):"));
+        myPanel.add(toDateField);
+    
+        int result = JOptionPane.showConfirmDialog(null, myPanel, 
+                "Please Enter Date Range", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            String fromDate = fromDateField.getText();
+            String toDate = toDateField.getText();
+            Map<String, String> filters = readFilterFile();
+            filters.put("dateSelectRange.fromDate", fromDate);
+            filters.put("dateSelectRange.toDate", toDate);
+            writeFilterFile(filters);
+        }
+    }
+    
+
+    public void orderStatusFilter(String option) {
+        Map<String, String> filters = readFilterFile();
+        if (option.equals("both")) {
+            filters.put("orderStatus.showStatus", "paid, pending");
+        } else {
+            filters.put("orderStatus.showStatus", option);
+        }
+        writeFilterFile(filters);
+    }
+    
+
+    public void totalPriceRangeFilter(double maxPrice, double minPrice) {
+        Map<String, String> filters = readFilterFile();
+        filters.put("totalPriceRange.minPrice", String.valueOf(minPrice));
+        filters.put("totalPriceRange.maxPrice", String.valueOf(maxPrice));
+        writeFilterFile(filters);
+    }
+    
+
+    public void customerNameFilter(String searchQuery) {
+        Map<String, String> filters = readFilterFile();
+        filters.put("customerName.searchQuery", searchQuery);
+        writeFilterFile(filters);
+    }
+    
 }

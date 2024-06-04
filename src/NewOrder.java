@@ -179,11 +179,11 @@ public class NewOrder extends JFrame {
         newOrderFrame.add(leftPanel);
 
         // Create buttons with icons aligned on top and padding
-        button1 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
-        button2 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
-        button3 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
-        button4 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
-        button5 = new ImageButton(resizeIcon("icons/no_.png", 100, 100), 50);
+        button1 = new ImageButton(resizeIcon("icons/no_new.png", 100, 100), 50);
+        button2 = new ImageButton(resizeIcon("icons/no_cancel.png", 100, 100), 50);
+        button3 = new ImageButton(resizeIcon("icons/no_confirm.png", 100, 100), 50);
+        button4 = new ImageButton(resizeIcon("icons/no_modify.png", 100, 100), 50);
+        button5 = new ImageButton(resizeIcon("icons/ph.png", 100, 100), 50);
         button6 = new ImageButton(resizeIcon("icons/back_exit.png", 100, 100), 50);
 
         // Set Text of Buttons
@@ -243,6 +243,7 @@ public class NewOrder extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 // Call the newTransaction method from the Operations class
                 ops.newTransaction(transaction_label, employee_ID);
+                ops.updateTransactionTotalBySQL(ops.getTransactionID(transaction_label), orderTotalLabel);
                 yesTransaction();
             }
         });
@@ -270,7 +271,7 @@ public class NewOrder extends JFrame {
                 ops.putBackStock(currenttransactionID); 
                 ops.cancelCurrentTransaction(currenttransactionID, transaction_label);
                 ops.clearTransactionTable(transaction_TableModel);
-
+                
                 noTransaction();
             }
         });
@@ -281,10 +282,10 @@ public class NewOrder extends JFrame {
             public void stateChanged(ChangeEvent e) {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
-                    button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    button3.setBackground(Color.decode("#ff793f")); // Change color when pressed
                     System.out.println("Button 3 - Is Pressed");
                 } else {
-                   // button3.setBackground(Color.decode("#ff793f")); // Change color back when released
+                    //button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
             }
         });
@@ -292,9 +293,14 @@ public class NewOrder extends JFrame {
         button3.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                noTransaction();
+                if (ops.confirmTransaction(ops.getTransactionID(transaction_label))) {
+                    // If confirmation was successful, clear the transaction table
+                    ops.clearTransactionTable(transaction_TableModel);
+                    noTransaction();
+                }
             }
         });
+        
 
         // BUTTON 4 MODEL with LISTENER
         button4.getModel().addChangeListener(new ChangeListener() {
@@ -302,7 +308,7 @@ public class NewOrder extends JFrame {
             public void stateChanged(ChangeEvent e) {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
-                    button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
+                    //button4.setBackground(Color.decode("#33d9b2")); // Change color when pressed
                     System.out.println("Button 4 - Is Pressed");
                 } else {
                     //button4.setBackground(Color.decode("#ff793f")); // Change color back when released
@@ -313,7 +319,8 @@ public class NewOrder extends JFrame {
         button4.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                
+                ops.modifyTransaction(ops.getTransactionID(transaction_label), orderTotalLabel);
+                ops.updateTransactionTotalBySQL(ops.getTransactionID(transaction_label), orderTotalLabel);
             }
         });
 
@@ -479,7 +486,8 @@ public class NewOrder extends JFrame {
                     // Update the order total label
                     System.out.println("Before updating transaction total: Current Total Amount = " + currentTotalAmount);
                     ops.updateTransactionTotal(transaction_TableModel, currentTotalAmount, orderTotalLabel);
-                    
+                    ops.updateTransactionTotalBySQL(ops.getTransactionID(transaction_label), orderTotalLabel);
+                    ops.checkItemFromTransaction(productID, itemNameLabel, itemLengthLabel, itemPriceLabel, itemLeftLabel);
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "Error: Invalid product ID.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -552,6 +560,8 @@ public class NewOrder extends JFrame {
     } // end of New Order
 
     public void noTransaction() {
+        transaction_label.setText("Current Transaction: ");
+
         button1.setEnabled(true);
         button1.setBackground(Color.decode("#ff793f"));
 

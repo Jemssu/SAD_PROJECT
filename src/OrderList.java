@@ -225,10 +225,23 @@ public class OrderList extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button1.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 1 - Is Pressed");
+                    System.out.println("Add Payment - Is Pressed");
                 } else {
                     button1.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.addPaymentToTransaction();
+                updateTransactionsTable();
+
+                // CLEAR SELECTION
+                System.out.println("Clearing selected row.");
+                transaction_Table.clearSelection();
+                items_TableModel.setRowCount(0);
             }
         });
         
@@ -246,6 +259,19 @@ public class OrderList extends JFrame {
             }
         });
 
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.modifyTransaction();
+                updateTransactionsTable();
+
+                // CLEAR SELECTION
+                System.out.println("Clearing selected row.");
+                transaction_Table.clearSelection();
+                items_TableModel.setRowCount(0);
+            }
+        });
+
         // BUTTON 3 MODEL with LISTENER
         button3.getModel().addChangeListener(new ChangeListener() {
             @Override
@@ -253,10 +279,23 @@ public class OrderList extends JFrame {
                 ButtonModel model = (ButtonModel) e.getSource();
                 if (model.isPressed()) {
                     button3.setBackground(Color.decode("#33d9b2")); // Change color when pressed
-                    System.out.println("Button 3 - Is Pressed");
+                    System.out.println("Remove Order - Is Pressed");
                 } else {
                     button3.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.removeTransaction();
+                updateTransactionsTable();
+
+                // CLEAR SELECTION
+                System.out.println("Clearing selected row.");
+                transaction_Table.clearSelection();
+                items_TableModel.setRowCount(0);
             }
         });
 
@@ -274,6 +313,18 @@ public class OrderList extends JFrame {
             }
         });
 
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+
+                // CLEAR SELECTION
+                System.out.println("Clearing selected row.");
+                transaction_Table.clearSelection();
+                items_TableModel.setRowCount(0);
+            }
+        });
+
         // BUTTON 5 MODEL with LISTENER
         button5.getModel().addChangeListener(new ChangeListener() {
             @Override
@@ -285,6 +336,19 @@ public class OrderList extends JFrame {
                 } else {
                     button5.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ops.selectFilter();
+                ops.updateTableFromFilterFile(transaction_TableModel);
+
+                // CLEAR SELECTION
+                System.out.println("Clearing selected row.");
+                transaction_Table.clearSelection();
+                items_TableModel.setRowCount(0);
             }
         });
 
@@ -403,7 +467,7 @@ public class OrderList extends JFrame {
         transactionClearButton.addActionListener(e -> clearSelectedRow());
 
         updateTransactionsTable();
-
+        ops.resetFilterFile();
     } // end of New Order
 
     public void nextPage() {
