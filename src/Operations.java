@@ -2958,7 +2958,10 @@ public class Operations {
 
         // check to see if it exists and if transaction_ActiveStatus = 'active'
 
-        
+        // look for the customer_ID in TBL_TransactionWHERE transaction_ID 
+
+        // get the name of the customer from tbl_customer using WHERE customer_ID , 
+        // get customer_FirstName and get customer_LastName and Customer_ContactNum
     }
 
     public void resetFilterFile() {
