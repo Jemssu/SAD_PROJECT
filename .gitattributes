@@ -5,3 +5,5 @@ C:/Users/Admin/Documents/VSCode/SAD_PROJECT/.git/objects/pack/pack-6f1e361ce1d2c
 SAD_PROJECT.git/objects/pack/pack-025d0f9dbd8c35d3b4954688eecee5262f4e3782.pack filter=lfs diff=lfs merge=lfs -text
 lib/poi-src-5.2.5-20231118.zip filter=lfs diff=lfs merge=lfs -text
 SAD_PROJECT.git/objects/pack/pack-8f30217c85a75bce25a82f55a3924ebc1baf7b33.pack filter=lfs diff=lfs merge=lfs -text
+*.pack filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
