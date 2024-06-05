@@ -51,5 +51,6 @@
         "XAMPP",
         "XSSF",
         "yanez"
-    ]
+    ],
+    "java.project.explorer.showNonJavaResources": false
 }
