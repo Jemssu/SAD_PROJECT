@@ -1,6 +1,7 @@
 dateSelectRange.fromDate = 2024-05-28
-dateSelectRange.toDate = 2024-06-04
+dateSelectRange.toDate = 2024-06-06
 orderStatus.showStatus = pending
 totalPriceRange.minPrice = 0.00
 totalPriceRange.maxPrice = 1000000.00
-customerName.searchQuery = *
+customerName.searchQuery = 
+cashierName.searchQuery = 
