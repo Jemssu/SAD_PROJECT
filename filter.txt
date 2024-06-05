@@ -4,4 +4,4 @@ orderStatus.showStatus = pending
 totalPriceRange.minPrice = 0.00
 totalPriceRange.maxPrice = 1000000.00
 customerName.searchQuery = 
-cashierName.searchQuery = 
+cashierName.searchQuery = James
