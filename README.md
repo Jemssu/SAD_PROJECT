@@ -1,2 +1,2 @@
 # SAD_PROJECT
-A School Project.
+This is a project
