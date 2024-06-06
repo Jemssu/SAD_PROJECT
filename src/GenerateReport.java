@@ -6,23 +6,37 @@ import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class GenerateReport extends JFrame{
     String bgColor = "#f7f1e3";
@@ -236,6 +250,16 @@ public class GenerateReport extends JFrame{
                 }
             }
         });
+
+        // BUTTON 1 MODEL with ACTION LISTENER (EXIT)
+        button1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generateDailySalesReport();
+            }
+        });
+
+
         
         // BUTTON 2 MODEL with LISTENER
         button2.getModel().addChangeListener(new ChangeListener() {
@@ -248,6 +272,13 @@ public class GenerateReport extends JFrame{
                 } else {
                     button2.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generateMonthlySalesReport();
             }
         });
 
@@ -265,6 +296,13 @@ public class GenerateReport extends JFrame{
             }
         });
 
+        button3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generateCustomSalesReport();
+            }
+        });
+
         // BUTTON 4 MODEL with LISTENER
         button4.getModel().addChangeListener(new ChangeListener() {
             @Override
@@ -276,6 +314,13 @@ public class GenerateReport extends JFrame{
                 } else {
                     button4.setBackground(Color.decode("#ff793f")); // Change color back when released
                 }
+            }
+        });
+
+        button4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                compareSalesReport();
             }
         });
 
@@ -384,6 +429,7 @@ public class GenerateReport extends JFrame{
 
         // Create a table and set the model
         salesReportTable = new JTable(tableModel);
+        salesReportTable.setDefaultEditor(Object.class, null);
         JScrollPane salesReportScrollPane = new JScrollPane(salesReportTable);
         salesReportScrollPane.setBounds(20, 70, 790, 570);
         rightPanel.add(salesReportScrollPane);
@@ -394,21 +440,25 @@ public class GenerateReport extends JFrame{
         tableModel.addColumn("Date");
         tableModel.addColumn("Payment Status");
 
-        
-
         resetSalesReportFilter();
         updateSalesReportTable();
     } // end of customerDetailsFrame
 
     public void generateDailySalesReport() {
-        // input date / day of what day's sales report to make
-        // set the values in the 'srfilter' to set the from and to date to current date
-        // set orderStatus to 'paid'
-        // save the table in excel 
+        // Set the filter values for the daily report
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILTER_FILE))) {
+            writer.write("dateSelectRange.fromDate = " + LocalDate.now() + "\n");
+            writer.write("dateSelectRange.toDate = " + LocalDate.now().plusDays(1) + "\n");
+            writer.write("orderStatus.showStatus = paid\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        // add some few spacing or make a second booklet inside or page
-        // to display the product revenue wherein it gets all the 
-        // save it to excel file
+        // Update the table with the daily report data
+        updateSalesReportTable();
+
+        // Save the table to an Excel file
+        saveTableToExcel("DailySalesReport " + LocalDate.now().toString());
     }
 
     public void generateMonthlySalesReport() {
@@ -421,13 +471,150 @@ public class GenerateReport extends JFrame{
         // get the srfilter query and make a table based on it
     }
 
+    public void compareSalesReport() {
+
+    }
+
+    private void saveTableToExcel(String name) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet(name);
+    
+        DefaultTableModel model = (DefaultTableModel) salesReportTable.getModel();
+    
+        // Adding General Sales Report table header
+        Row generalSalesHeaderRow = sheet.createRow(0);
+        Cell generalSalesHeaderCell = generalSalesHeaderRow.createCell(0);
+        generalSalesHeaderCell.setCellValue("GENERAL SALES REPORT");
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, model.getColumnCount() - 1)); // Merge cells for the header
+    
+        // Adding column headers for General Sales Report
+        Row headerRow = sheet.createRow(1);
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(model.getColumnName(i));
+        }
+    
+        // Calculate total sales per product
+        Map<Integer, Integer> productSalesMap = new HashMap<>();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int productId = Integer.parseInt(model.getValueAt(i, 0).toString()); // Assuming the first column is the product ID
+            int quantity = Integer.parseInt(model.getValueAt(i, 2).toString()); // Assuming the third column is the quantity sold
+            productSalesMap.put(productId, productSalesMap.getOrDefault(productId, 0) + quantity);
+        }
+    
+    // Sort the product sales map by descending order of total sales
+    ArrayList<Map.Entry<Integer, Integer>> sortedProductSales = new ArrayList<>(productSalesMap.entrySet());
+    Collections.sort(sortedProductSales, (e1, e2) -> e2.getValue().compareTo(e1.getValue()));
+    
+        // Adding Sales Report by Product table header
+        Row productSalesHeaderRow = sheet.createRow(model.getRowCount() + 3); // 3 extra rows for spacing
+        Cell productSalesHeaderCell = productSalesHeaderRow.createCell(0);
+        productSalesHeaderCell.setCellValue("SALES REPORT BY PRODUCT");
+        sheet.addMergedRegion(new CellRangeAddress(model.getRowCount() + 3, model.getRowCount() + 3, 0, 3)); // Merge cells for the header
+    
+        // Adding column headers for Sales Report by Product
+        Row productHeaderRow = sheet.createRow(model.getRowCount() + 4); // 4 extra rows for spacing
+        String[] productHeaders = {"PRODUCT ID", "PRODUCT NAME", "QUANTITY", "Total Sales"};
+        for (int i = 0; i < productHeaders.length; i++) {
+            Cell cell = productHeaderRow.createCell(i);
+            cell.setCellValue(productHeaders[i]);
+        }
+    
+        // Connect to the database
+        try (Connection connection = connect()) {
+            // Adding data for Sales Report by Product
+            int rowCount = model.getRowCount() + 5; // 5 extra rows for spacing and header
+            for (Map.Entry<Integer, Integer> entry : sortedProductSales) {
+                int productId = entry.getKey();
+                int totalSales = entry.getValue();
+                String productName = getProductNameFromDatabase(productId, connection); // Fetch product name from database
+                int quantitySold = getTotalQuantitySold(productId, model); // Fetch total quantity sold
+                Row row = sheet.createRow(rowCount++);
+                row.createCell(0).setCellValue(productId);
+                row.createCell(1).setCellValue(productName);
+                row.createCell(2).setCellValue(quantitySold);
+                row.createCell(3).setCellValue(totalSales);
+            }
+    
+            // Auto-size columns to fit the content
+            for (int i = 0; i < productHeaders.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+    
+            try (FileOutputStream outputStream = new FileOutputStream("SalesReport.xlsx")) {
+                workbook.write(outputStream);
+                workbook.close();
+                JOptionPane.showMessageDialog(this, "Sales report saved to Excel file successfully.", "Report Saved", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error saving the report to Excel file.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error connecting to the database.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Method to fetch product name from database
+    private String getProductNameFromDatabase(int productId, Connection connection) throws SQLException {
+        String productName = "";
+        String query = "SELECT product_name FROM tbl_product WHERE product_ID = ?";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, productId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    productName = resultSet.getString("product_name");
+                }
+            }
+        }
+        return productName;
+    }
+
+    // Method to fetch total quantity sold for a product
+    private int getTotalQuantitySold(int productId, DefaultTableModel model) {
+        // Implement this method to calculate total quantity sold for the given productId from the model
+        int totalQuantitySold = 0;
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int currentProductId = Integer.parseInt(model.getValueAt(i, 0).toString());
+            if (currentProductId == productId) {
+                totalQuantitySold += Integer.parseInt(model.getValueAt(i, 2).toString()); // Assuming the third column is the quantity sold
+            }
+        }
+        return totalQuantitySold;
+    }
+
+
+    /**
+     * Establishes Connection to the database
+     */
+    private Connection connect() throws SQLException {
+        String url1 = "jdbc:mysql://localhost:3306/prj_tan";
+        String url2 = "jdbc:mysql://localhost:3306/prj_yanez"; // <-- Put Your Database Name Here
+        String username = "root";
+        String password = ""; 
+
+        try {
+            return DriverManager.getConnection(url1, username, password);
+        } catch (SQLException e1) {
+            System.out.println("Failed to connect to prj_tan, attempting to connect to prj_yanez...");
+            try {
+                return DriverManager.getConnection(url2, username, password);
+            } catch (SQLException e2) {
+                System.err.println("Failed to connect to both prj_tan and prj_yanez.");
+                e2.printStackTrace();
+                throw e2;  // rethrow the last exception
+            }
+        }
+    }
+
     private static final String FILTER_FILE = "srfilter.txt";
 
     public void updateSalesReportTable() {
         Map<String, String> filter = readSalesReportFilter();
         String query = constructQuery(filter);
+        System.out.println(query);
 
-        try (Connection conn = DriverManager.getConnection("jdbc:mariadb://localhost:3306/prj_tan", "root", "");
+        try (Connection conn = connect();
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(query)) {
 
@@ -452,9 +639,8 @@ public class GenerateReport extends JFrame{
 
     public void resetSalesReportFilter() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILTER_FILE))) {
-            String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-            writer.write("dateSelectRange.fromDate = " + currentDate + "\n");
-            writer.write("dateSelectRange.toDate = " + currentDate + "\n");
+            writer.write("dateSelectRange.fromDate = " + LocalDate.now() + "\n");
+            writer.write("dateSelectRange.toDate = " + LocalDate.now().plusDays(1) + "\n");
             writer.write("orderStatus.showStatus = paid\n");
         } catch (IOException e) {
             e.printStackTrace();

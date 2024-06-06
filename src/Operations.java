@@ -2403,20 +2403,29 @@ public class Operations {
             }
     
             // Determine order status based on total paid
-            String orderStatus;
-            if (amountPaid < totalAmount) {
-                // Total paid is less than total amount
-                JOptionPane.showMessageDialog(null, "Customer details must be added.", "Warning", JOptionPane.WARNING_MESSAGE);
-                while (true) {
-                    if (addCustomerWhoDidNotPayFull(conn, transactionID)) {
-                        orderStatus = "pending";
-                        break;
+        String orderStatus;
+        if (amountPaid < totalAmount) {
+            // Total paid is less than total amount
+            int response = JOptionPane.showConfirmDialog(null, "Customer details must be added. Do you want to continue?", "Incomplete Payment", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (response == JOptionPane.NO_OPTION) {
+                return false;
+            }
+            while (true) {
+                if (addCustomerWhoDidNotPayFull(conn, transactionID)) {
+                    orderStatus = "pending";
+                    break;
+                } else {
+                    // Ask again to continue or cancel
+                    response = JOptionPane.showConfirmDialog(null, "Customer details must be added. Do you want to continue?", "Incomplete Payment", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    if (response == JOptionPane.NO_OPTION) {
+                        return false;
                     }
                 }
-            } else {
-                // Total paid is equal to or greater than total amount
-                orderStatus = "paid";
             }
+        } else {
+            // Total paid is equal to or greater than total amount
+            orderStatus = "paid";
+        }
     
             // Calculate change amount if applicable
             double changeAmount = amountPaid - totalAmount;
